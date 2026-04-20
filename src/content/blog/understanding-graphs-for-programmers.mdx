@@ -1,0 +1,216 @@
+---
+title: "Understanding Graphs for Programmers"
+description: "Graphs are everywhere in software — dependency trees, social networks, routing tables, build systems. Here's how to actually think in graphs."
+publishedAt: 2026-01-12
+tags: ["algorithms", "data-structures", "systems"]
+draft: false
+---
+
+I didn't really understand graphs until I started building a monorepo dependency analyzer.
+
+I thought I understood them. I'd done the interview prep, implemented BFS, could recite adjacency lists. But that's pattern matching, not understanding. Real understanding showed up when I was staring at a monorepo with 40-something packages, trying to answer one concrete question: _if I change this shared utility, what else breaks?_
+
+The packages were nodes. The `import` statements were directed edges. The question was reachability. I'd been solving graph problems for years in disguise — in the AST explorer I've been building, in the chess engine's game tree, in every state machine I'd ever written. I just didn't have the vocabulary to see them.
+
+This post is about building that vocabulary — not just the names, but the actual mechanisms behind the algorithms that make graphs useful.
+
+## The Model First
+
+A graph is a set of nodes and a set of edges between them. That definition is almost useless on its own. What matters is what you decide to put in the nodes and edges, and what constraints you impose.
+
+In my monorepo analyzer:
+
+- **Nodes** = packages
+- **Edges** = `import` relationships, directed (A imports B ≠ B imports A)
+- **Constraint** = no cycles (it's a DAG — directed acyclic graph)
+
+In the chess engine:
+
+- **Nodes** = board positions
+- **Edges** = legal moves
+- **Constraint** = none — cycles are possible (same position, different move sequences)
+
+In a state machine parser:
+
+- **Nodes** = parser states
+- **Edges** = token transitions
+- **Constraint** = deterministic (each state + token maps to exactly one next state)
+
+Same abstract structure. Completely different problems. The algorithm you reach for depends on the constraints and the question you're asking, not on the word "graph."
+
+The hardest part of working with graphs is almost never the algorithm. It's the modeling step — deciding what the nodes and edges represent, and what that choice implies. Get the model right and the algorithm falls out naturally. Get it wrong and you'll be fighting the data structure the whole way through.
+
+When I started the monorepo analyzer, my first instinct was a lookup table: package name → list of dependents. That's fine for direct lookups, but it kept breaking down when I needed to answer "what are all the transitive dependents?" I kept writing recursive functions that didn't quite work. The moment I reframed it as a graph and started thinking in BFS and DFS, the same questions had clean answers.
+
+## Traversal: The Mechanism Behind BFS and DFS
+
+Every graph algorithm is built on traversal. There are two flavors, and understanding _why_ they differ — not just what the difference is — matters.
+
+Both BFS and DFS share the same skeleton: a visited set to avoid revisiting nodes, and a frontier to track what to explore next. The only structural difference is how you manage that frontier.
+
+**BFS uses a queue (FIFO).** When you add neighbors to the frontier, they go to the back. You process the front. This means you always finish exploring every node at distance _d_ before you touch any node at distance _d+1_. That's not a side effect — it's the invariant that makes BFS useful.
+
+```typescript
+function bfs(graph: Map<string, string[]>, start: string): Map<string, number> {
+  const dist = new Map<string, number>();
+  const queue: string[] = [start];
+  dist.set(start, 0);
+
+  while (queue.length > 0) {
+    const node = queue.shift()!;
+    for (const neighbor of graph.get(node) ?? []) {
+      if (!dist.has(neighbor)) {
+        dist.set(neighbor, dist.get(node)! + 1);
+        queue.push(neighbor);
+      }
+    }
+  }
+  return dist;
+}
+```
+
+This gives you shortest-hop distance from `start` to every reachable node. In the monorepo analyzer, I run BFS on the _reversed_ graph — edges flipped — starting from the changed package. The result is every package that transitively depends on it, with their dependency depth. That tells me not just _what_ breaks but _how directly_ it's affected.
+
+**DFS uses a stack (LIFO).** Neighbors go on top; you always process the most recently discovered node first. This sends you as deep as possible into one branch before backtracking. The natural recursion of DFS makes it the right tool for problems that require exploring complete paths: cycle detection, topological sort, strongly connected components.
+
+But there's a subtlety in DFS that most explanations skip: to correctly detect cycles in a _directed_ graph, a simple visited boolean isn't enough. You need three states.
+
+```typescript
+type NodeState = "unvisited" | "in-progress" | "done";
+
+function hasCycle(graph: Map<string, string[]>): boolean {
+  const state = new Map<string, NodeState>();
+  for (const node of graph.keys()) state.set(node, "unvisited");
+
+  function dfs(node: string): boolean {
+    state.set(node, "in-progress");
+
+    for (const neighbor of graph.get(node) ?? []) {
+      if (state.get(neighbor) === "in-progress") return true; // back edge = cycle
+      if (state.get(neighbor) === "unvisited" && dfs(neighbor)) return true;
+    }
+
+    state.set(node, "done");
+    return false;
+  }
+
+  for (const node of graph.keys()) {
+    if (state.get(node) === "unvisited" && dfs(node)) return true;
+  }
+  return false;
+}
+```
+
+Why three states? Consider `A → B → C` and `A → C`. When you're exploring from A, you visit B, then C from B, then backtrack. When you reach C from A directly, it's already marked `done` — not a cycle. But if you had `A → B → A`, when you're exploring from B and try to visit A, it's marked `in-progress` — still on the current path. _That's_ a back edge, and back edges in directed graphs are exactly cycles.
+
+I use this in the monorepo analyzer before running any other analysis. A circular dependency means topological sort is impossible and the analysis is meaningless. Fail fast.
+
+## Topological Sort: Ordering With Dependencies
+
+Topological sort answers: given a DAG, what's a valid linear ordering of nodes such that every edge points forward?
+
+This is the question build systems answer. Compile dependencies before dependents. Run migration 003 before migration 004. Install packages in resolution order. If there's a cycle, the question has no answer — which is exactly why cycle detection comes first.
+
+Kahn's algorithm makes this concrete. Start with nodes that have no incoming edges — nothing depends on them, so they can go first. Process them one by one; when you remove a node, reduce the in-degree of its neighbors. Any neighbor whose in-degree drops to zero gets added to the queue next.
+
+```typescript
+function topologicalSort(graph: Map<string, string[]>): string[] | null {
+  const inDegree = new Map<string, number>();
+  for (const node of graph.keys()) inDegree.set(node, 0);
+  for (const neighbors of graph.values()) {
+    for (const n of neighbors) inDegree.set(n, (inDegree.get(n) ?? 0) + 1);
+  }
+
+  const queue: string[] = [];
+  for (const [node, deg] of inDegree) {
+    if (deg === 0) queue.push(node);
+  }
+
+  const order: string[] = [];
+  while (queue.length > 0) {
+    const node = queue.shift()!;
+    order.push(node);
+    for (const neighbor of graph.get(node) ?? []) {
+      inDegree.set(neighbor, inDegree.get(neighbor)! - 1);
+      if (inDegree.get(neighbor) === 0) queue.push(neighbor);
+    }
+  }
+
+  // If we couldn't order all nodes, there's a cycle
+  return order.length === graph.size ? order : null;
+}
+```
+
+The cycle detection here is free: if the final order doesn't include every node, some nodes were never reachable from zero in-degree — they're stuck in a cycle, mutually blocked. Returning `null` is the signal.
+
+This is what the monorepo analyzer uses to produce a valid build order. When a package changes, I take the set of affected packages (from the reversed BFS) and run topological sort to produce the order in which they need to be rebuilt. Not just "these break" but "rebuild them in this sequence."
+
+## Weighted Paths and Edge Relaxation
+
+BFS finds shortest paths when all edges cost the same. The moment edges have different weights — latencies, distances, probabilities — you need Dijkstra's algorithm.
+
+The core idea is **edge relaxation**: every time you visit a node, ask whether you can improve the known shortest distance to any of its neighbors by routing through this node. If the path through the current node is shorter than what you've recorded, update the record and re-add the neighbor to the queue.
+
+```typescript
+type WeightedGraph = Map<string, Array<[string, number]>>;
+
+function dijkstra(graph: WeightedGraph, start: string): Map<string, number> {
+  const dist = new Map<string, number>();
+  for (const node of graph.keys()) dist.set(node, Infinity);
+  dist.set(start, 0);
+
+  // [cost, node] — sorted ascending by cost
+  const pq: Array<[number, string]> = [[0, start]];
+
+  while (pq.length > 0) {
+    pq.sort((a, b) => a[0] - b[0]);
+    const [cost, node] = pq.shift()!;
+
+    // We've already found a better path to this node
+    if (cost > dist.get(node)!) continue;
+
+    for (const [neighbor, weight] of graph.get(node) ?? []) {
+      const candidate = cost + weight;
+      if (candidate < dist.get(neighbor)!) {
+        dist.set(neighbor, candidate);
+        pq.push([candidate, neighbor]);
+      }
+    }
+  }
+  return dist;
+}
+```
+
+The greedy choice — always expand the cheapest unvisited node — works because edge weights are non-negative. Once you've finalized a node's distance, no future path through any other node can be cheaper. If weights could be negative, this guarantee breaks (use Bellman-Ford instead).
+
+The `continue` guard handles stale entries: when we find a better path to a node, we push a new entry with the lower cost but leave the old one in the queue. When the old one eventually surfaces, it has a cost higher than what we've recorded — skip it.
+
+## The Chess Engine: DFS on a Tree You Can't Fully Explore
+
+The chess engine I've been building sits on a different kind of graph problem. The game tree — positions as nodes, legal moves as edges — is technically finite but astronomically large. You can't traverse it completely, so the algorithm has to be smart about which parts to explore.
+
+Minimax is DFS on this tree, alternating between maximizing (your move) and minimizing (opponent's move) at each level, with an evaluation function that scores leaf positions. But the insight that actually matters in practice is **alpha-beta pruning**: you can skip entire subtrees that provably can't affect the final answer.
+
+If you're the maximizer and you've already found a move worth 3, you don't need to fully explore a branch where the minimizer can force it below 3. You prune it. This is a graph traversal insight: don't visit nodes whose contribution to the final answer is already bounded out.
+
+Without pruning, minimax at depth 5 might evaluate millions of positions. With pruning, the same search evaluates far fewer — roughly the square root in the best case. The algorithm hasn't changed. The traversal strategy has.
+
+This is the kind of problem graphs unlock: the question isn't "can I traverse the graph?" It's "which parts of the graph do I actually need to traverse?"
+
+## Storing the Graph
+
+Two standard representations:
+
+**Adjacency matrix** — a 2D array where `matrix[i][j] = 1` means an edge from i to j. O(1) edge lookup, O(V²) space. Right for dense graphs where most pairs of nodes are connected.
+
+**Adjacency list** — each node stores only its actual neighbors. O(V + E) space. Right for sparse graphs where most pairs aren't connected.
+
+Most real-world graphs are sparse. My monorepo has ~40 packages. Even if every package imported 5 others, that's 200 edges — nowhere near the 1,600 you'd need for a matrix to make sense. When in doubt, use an adjacency list. `Map<string, string[]>` in TypeScript is enough to start.
+
+## What the Graph Lens Actually Changes
+
+The lens doesn't just give you new algorithms. It changes what questions you ask when you're designing.
+
+When I'm building something that involves "things that relate to other things," I now ask: what are the nodes, what are the edges, and is there a cycle constraint? Those three questions rule out huge swaths of the design space before I've written a line of code. A system that can't have cycles needs topological ordering. A system that asks "what's reachable?" needs BFS. A system that needs the cheapest path needs weighted edges and Dijkstra's.
+
+The monorepo, the AST, the chess tree — none of them announced themselves as graph problems. I had to learn to recognize the shape. Once I did, the right tools followed. That's the actual skill: not memorizing algorithms, but seeing the structure underneath the problem.

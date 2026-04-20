@@ -1,0 +1,99 @@
+---
+title: "What Large Codebases Teach Us"
+description: "Working in a large codebase changes how you think about software. Here are the lessons that only scale can teach."
+publishedAt: 2026-02-28
+tags: ["systems", "architecture", "engineering"]
+draft: false
+---
+
+Most of what I thought I knew about software engineering came from projects I could hold in my head.
+
+Side projects. Small team work. Codebases where I had made every significant decision, or at least could read every significant file. That context is comfortable. It's also misleading, because it hides a category of problems that only appear at scale.
+
+The first time I worked in a truly large codebase — hundreds of thousands of lines, dozens of contributors, years of accumulated decisions — I realized how much of my mental model was wrong. Not wrong in a "bad code" way. Wrong in a "these lessons require scale to teach" way.
+
+Here's what actually changed in how I think.
+
+## You Will Never Understand It
+
+I spent a lot of time early on trying to understand large codebases the same way I understood small ones — by reading them. That doesn't work. There's simply too much. By the time you've read one end, the other end has changed.
+
+The shift that actually worked: **stop optimizing for understanding, start optimizing for navigability.** In a codebase you can't hold in your head, you need to be able to make correct changes with *partial* understanding. That means the codebase has to be structured so that partial understanding is enough.
+
+Good type signatures. Module boundaries that actually mean something. Functions that do what their name says. These aren't style preferences at scale — they're load-bearing. A well-named function with a tight signature is something I can trust without reading its body. A module with a stable interface is something I can depend on without knowing its internals.
+
+I now write code differently because of this. Not for me, reading it now with full context — for me, six months from now, two minutes before a deploy, with no context at all.
+
+## Abstraction Is a Liability Until It Isn't
+
+I used to think abstraction was almost always good. Less duplication. More flexibility. Better composability.
+
+Large codebases corrected this.
+
+Every layer of abstraction is a place where understanding breaks. I've seen functions named `process` doing twenty different things depending on runtime type, because someone abstracted too eagerly. I've seen indirection stacked three levels deep that made sense when there were two callers and became a trap when there were two hundred. Finding a bug in code like that takes ten times as long because you're navigating levels instead of reading logic.
+
+The lesson that stuck: **abstract to the right level, not the maximum level.** The measure of a good abstraction isn't how much it hides — it's whether what it hides is actually irrelevant to the callers. If callers keep poking through the abstraction, checking types, reading internal state, catching exceptions they weren't supposed to see — the abstraction is lying about what it is.
+
+The abstractions that survive years in a large codebase tend to be small, stable, and honest. They do one thing, name it clearly, and don't try to guess what callers will eventually need.
+
+## Consistency Beats Local Correctness
+
+This one took me longest to internalize, because it runs against the instinct to always make the best local decision.
+
+In a large codebase, I regularly find code I'd do differently. Patterns I'd replace. Libraries that have better alternatives now. Architectural choices that made sense in 2019 and feel awkward in 2026. The instinct is to fix it. This is usually wrong.
+
+The cost of inconsistency compounds in ways that don't show up in small systems. When a codebase uses one error handling pattern consistently, new engineers learn it once and apply it everywhere. When three teams each decided to do it better, new engineers have to figure out which one applies where — and why it's different — every time they cross a boundary. That cost is invisible on any individual change. It accumulates across thousands of changes.
+
+The revision I've made to "always do the best thing": *the best thing for the system, not the best thing for this file.* Sometimes that means writing code I could write better, because consistency is more valuable than local optimization. I'll still push for the better pattern — but through a codebase-wide change with a clear migration path, not as a one-off that splits the codebase.
+
+## Names Are the Architecture
+
+A bad name in a small project is annoying. A bad name in a large project is a lie that compounds over years.
+
+I've started treating naming with the same seriousness as interface design, because in practice they're the same thing. The name is the interface for any programmer who reads the code without full context.
+
+`utils` in a 500-file codebase is nearly useless. You can't predict what's there, and you can't say with confidence what shouldn't be there. `auth-token-validation` is legible at a glance. That difference matters when you're navigating a codebase you've never seen before.
+
+The subtler thing I've noticed: **names encode mental models, and mental models drift.** A concept named `user` when there was one kind of user becomes a lie when you have `AdminUser`, `GuestUser`, and `ServiceAccount`. The name didn't change. The meaning drifted. That drift is invisible until a new person reads the code and builds the wrong model.
+
+Naming something precisely forces you to understand what it actually is. That's not a side effect — it's part of the value.
+
+## Tests Are the Only Honest Documentation
+
+In a small project, tests are for catching regressions. That's real, but it's not the most important thing they do in a large codebase.
+
+In a large codebase, **tests are the most reliable documentation of what the code is supposed to do.**
+
+Comments lie. READMEs go stale. Internal wikis decay. The only thing that tells you with certainty what a function is supposed to do — under what inputs, with what guarantees — is a passing test suite someone has bothered to maintain. A test is a precise, executable specification. The implementation might be wrong, but the test tells you what contract was intended.
+
+I changed how I read unfamiliar code because of this. Now I read the tests first. They tell me what inputs were considered, what edge cases the author thought mattered, what the expected contract is. It's often faster than reading the implementation.
+
+And I changed how I write them. `expect(result).toBeTruthy()` documents nothing. `expect(result.status).toBe('published')` and `expect(result.authorId).toBe(userId)` documents a contract. The difference is whether a future reader can learn anything from the test failing.
+
+## Delete More Than You Think You Should
+
+Large codebases accumulate. Features ship, sometimes get removed, but the scaffolding sticks around. Dead code, feature flags for things that launched two years ago, compatibility shims for callers that no longer exist. It all stays because deleting things feels risky.
+
+Every dead line is a liability. Someone reads it. Someone spends fifteen minutes figuring out if it matters before deciding not to touch it to be safe. The codebase gets harder to navigate. This repeats.
+
+I've made it a habit to be aggressive about deletion in code I own. The bar I use: if I can verify something isn't reachable and the tests pass without it, it goes. Version control exists precisely so that this can be undone if I'm wrong. The cost of deleting something that turns out to matter is recoverable. The cost of never deleting anything compounds indefinitely.
+
+"The best code is no code" isn't just about not over-engineering. It's a commitment to ongoing subtraction as the codebase evolves.
+
+## The Bottleneck Shifts to Coordination
+
+In small projects, most problems are technical. How do I implement this? How do I make this fast enough?
+
+In large codebases and large teams, that changes. The technical problems are still there, but they stop being the bottleneck. The bottleneck becomes coordination.
+
+How do you make a breaking change to an interface shared by twenty callers? How do you migrate a service to a new data model without downtime? How do you deprecate an API when you don't control the teams that use it? These are coordination problems. They have technical components — versioning, feature flags, backwards-compatible transitions — but the hard part is the human part: communicating change, aligning timelines, managing the migration across teams with competing priorities.
+
+Understanding this changed how I design things. I think about versionability upfront now. I design interfaces that can add fields without breaking callers. I build deployments that can roll back. Not because these are abstract best practices, but because I've seen what happens when you have to make a coordinated change across a large system that wasn't designed with any of this in mind. It's months of careful work that could have been a one-week feature.
+
+---
+
+Small projects let you get good at the craft of writing code. That's real and it matters.
+
+But large codebases teach something different: how to build systems that survive time, teams, and change. Those are different skills. I didn't fully understand the distinction until I'd worked in both environments and felt the gap between them.
+
+If you haven't spent serious time in a large codebase — find one. Read it before you contribute to it. Try to understand not just what choices were made, but why, and what constraints made a different choice worse. That's where the real education is.

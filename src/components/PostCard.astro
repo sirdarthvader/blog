@@ -1,0 +1,33 @@
+---
+import FormattedDate from './FormattedDate.astro';
+
+interface Props {
+  title: string;
+  description: string;
+  publishedAt: Date;
+  slug: string;
+  tags: string[];
+}
+
+const { title, description, publishedAt, slug } = Astro.props;
+---
+
+<article>
+  <a href={`/blog/${slug}`} style="text-decoration: none;">
+    <div style="display: flex; align-items: flex-start; justify-content: space-between; gap: 1rem; margin-bottom: 0.25rem;">
+      <h2 style="font-weight: 500; font-size: 1rem; line-height: 1.5; color: var(--text-heading);" class="post-title">
+        {title}
+      </h2>
+      <span style="font-family: ui-monospace, monospace; font-size: 0.75rem; color: var(--text-nav); flex-shrink: 0; padding-top: 0.125rem;">
+        <FormattedDate date={publishedAt} />
+      </span>
+    </div>
+    <p style="font-size: 0.9375rem; color: var(--text-nav); line-height: 1.625;">{description}</p>
+  </a>
+</article>
+
+<style>
+  a:hover .post-title {
+    color: var(--text-nav-hover);
+  }
+</style>

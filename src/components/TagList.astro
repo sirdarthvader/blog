@@ -1,0 +1,27 @@
+---
+interface Props {
+  tags: string[];
+  linkable?: boolean;
+}
+
+const { tags, linkable = false } = Astro.props;
+---
+
+<ul style="display: flex; flex-wrap: wrap; gap: 0.5rem; padding: 0; list-style: none;">
+  {tags.map((tag) => (
+    <li>
+      {linkable ? (
+        <a
+          href={`/blog?tag=${tag}`}
+          style="font-family: ui-monospace, monospace; font-size: 0.75rem; text-decoration: none; color: var(--text-nav);"
+        >
+          #{tag}
+        </a>
+      ) : (
+        <span style="font-family: ui-monospace, monospace; font-size: 0.75rem; color: var(--text-nav);">
+          #{tag}
+        </span>
+      )}
+    </li>
+  ))}
+</ul>

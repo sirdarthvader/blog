@@ -1,0 +1,52 @@
+---
+import BaseLayout from '../layouts/BaseLayout.astro';
+---
+
+<BaseLayout title="Home" description="Software engineer exploring systems, mathematics, physics, and the ideas that connect them.">
+  <h1 class="name">Ashish Singh</h1>
+
+  <div class="content">
+    <p>
+      Software engineer. I think about systems — code, algorithms, mathematics, physics, and the ideas that connect them.
+    </p>
+
+    <p>
+      I <a href="/blog">write here</a> when something is worth writing down.
+    </p>
+
+    <p>
+      Working on things like a monorepo dependency analyzer, an AST explorer, and a chess engine.
+    </p>
+
+    <p class="footer-links">
+      Find me on <a href="https://github.com/sirdarthvader" target="_blank" rel="noopener noreferrer">GitHub</a> or,
+      <a href="https://linkedin.com/in/ashish-nandan-singh" target="_blank" rel="noopener noreferrer">LinkedIn</a>
+      
+    </p>
+  </div>
+</BaseLayout>
+
+<style>
+  .name {
+    font-size: 1.25rem;
+    font-weight: 500;
+    margin-bottom: 1.5rem;
+    line-height: 1.625;
+    color: var(--text-heading);
+  }
+
+  .content {
+    line-height: 1.75;
+  }
+
+  .content p {
+    margin-bottom: 1.25rem;
+    color: var(--text-copy);
+  }
+
+  .footer-links {
+    margin-top: 2rem;
+    color: var(--text-nav) !important;
+    font-size: 0.9375rem;
+  }
+</style>

@@ -1,0 +1,61 @@
+---
+import BaseLayout from '../../layouts/BaseLayout.astro';
+import PostCard from '../../components/PostCard.astro';
+import { getCollection } from 'astro:content';
+
+const allPosts = (await getCollection('blog', ({ data }) => !data.draft))
+  .sort((a, b) => b.data.publishedAt.valueOf() - a.data.publishedAt.valueOf());
+
+const allTags = [...new Set(allPosts.flatMap((p) => p.data.tags))].sort();
+
+const selectedTag = Astro.url.searchParams.get('tag');
+const posts = selectedTag
+  ? allPosts.filter((p) => p.data.tags.includes(selectedTag))
+  : allPosts;
+---
+
+<BaseLayout title="Writing" description="Articles on development, research, and ideas.">
+  <header style="margin-bottom: 2.5rem;">
+    <h1 style="font-size: 1.25rem; font-weight: 500; margin-bottom: 0.5rem; color: var(--text-heading);">Writing</h1>
+    <p style="color: var(--text-nav); font-size: 0.9375rem;">
+      {allPosts.length} {allPosts.length === 1 ? 'article' : 'articles'} on development, research, and ideas.
+    </p>
+  </header>
+
+  {allTags.length > 0 && (
+    <div style="display: flex; flex-wrap: wrap; gap: 0.5rem; margin-bottom: 2rem;">
+      <a
+        href="/blog"
+        style={`font-family: ui-monospace, monospace; font-size: 0.75rem; text-decoration: none; color: ${!selectedTag ? 'var(--text-heading)' : 'var(--text-nav)'};`}
+      >
+        all
+      </a>
+      {allTags.map((tag) => (
+        <a
+          href={`/blog?tag=${tag}`}
+          style={`font-family: ui-monospace, monospace; font-size: 0.75rem; text-decoration: none; color: ${selectedTag === tag ? 'var(--text-heading)' : 'var(--text-nav)'};`}
+        >
+          #{tag}
+        </a>
+      ))}
+    </div>
+  )}
+
+  {posts.length > 0 ? (
+    <div style="display: flex; flex-direction: column; gap: 0;">
+      {posts.map((post) => (
+        <div style="padding: 1.25rem 0; border-bottom: 1px solid var(--border);">
+          <PostCard
+            title={post.data.title}
+            description={post.data.description}
+            publishedAt={post.data.publishedAt}
+            slug={post.id}
+            tags={post.data.tags}
+          />
+        </div>
+      ))}
+    </div>
+  ) : (
+    <p style="color: var(--text-nav);">No posts found{selectedTag ? ` for #${selectedTag}` : ''}.</p>
+  )}
+</BaseLayout>

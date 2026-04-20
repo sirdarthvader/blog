@@ -1,0 +1,58 @@
+---
+import BaseLayout from '../../layouts/BaseLayout.astro';
+import TagList from '../../components/TagList.astro';
+import { getCollection, render } from 'astro:content';
+
+export async function getStaticPaths() {
+  const projects = await getCollection('projects', ({ data }) => !data.draft);
+  return projects.map((project) => ({
+    params: { slug: project.id },
+    props: { project },
+  }));
+}
+
+const { project } = Astro.props;
+const { Content } = await render(project);
+---
+
+<BaseLayout title={project.data.title} description={project.data.description}>
+  <article>
+    <header class="mb-10">
+      <a href="/projects" class="text-sm text-zinc-500 hover:text-zinc-300 transition-colors font-mono mb-6 block">
+        ← Projects
+      </a>
+      <h1 class="text-3xl font-semibold tracking-tight text-zinc-100 mb-4">
+        {project.data.title}
+      </h1>
+      <p class="text-zinc-400 text-lg leading-relaxed mb-4">{project.data.description}</p>
+
+      <div class="flex flex-wrap items-center gap-4">
+        {project.data.tags.length > 0 && <TagList tags={project.data.tags} />}
+        {project.data.github && (
+          <a
+            href={project.data.github}
+            target="_blank"
+            rel="noopener"
+            class="text-sm text-zinc-500 hover:text-zinc-300 transition-colors font-mono"
+          >
+            GitHub ↗
+          </a>
+        )}
+        {project.data.url && (
+          <a
+            href={project.data.url}
+            target="_blank"
+            rel="noopener"
+            class="text-sm text-zinc-500 hover:text-zinc-300 transition-colors font-mono"
+          >
+            Live site ↗
+          </a>
+        )}
+      </div>
+    </header>
+
+    <div class="prose">
+      <Content />
+    </div>
+  </article>
+</BaseLayout>

@@ -1,0 +1,81 @@
+---
+import BaseLayout from '../../layouts/BaseLayout.astro';
+import ProjectCard from '../../components/ProjectCard.astro';
+import { getCollection } from 'astro:content';
+
+const projects = (await getCollection('projects', ({ data }) => !data.draft))
+  .sort((a, b) => b.data.publishedAt.valueOf() - a.data.publishedAt.valueOf());
+
+const allTags = [...new Set(projects.flatMap((p) => p.data.tags))].sort();
+const selectedTag = Astro.url.searchParams.get('tag');
+const filtered = selectedTag
+  ? projects.filter((p) => p.data.tags.includes(selectedTag))
+  : projects;
+---
+
+<BaseLayout title="Projects" description="Things I've built.">
+  <header style="margin-bottom: 2.5rem;">
+    <h1 style="font-size: 1.25rem; font-weight: 500; margin-bottom: 0.5rem;" class="page-h1">Projects</h1>
+    <p style="color: rgb(115 115 115); font-size: 0.9375rem;">
+      {projects.length} {projects.length === 1 ? 'project' : 'projects'} — things I've built and shipped.
+    </p>
+  </header>
+
+  {allTags.length > 0 && (
+    <div style="display: flex; flex-wrap: wrap; gap: 0.5rem; margin-bottom: 2rem;">
+      <a
+        href="/projects"
+        style={`font-family: ui-monospace, monospace; font-size: 0.75rem; text-decoration: none; color: ${!selectedTag ? 'rgb(23 23 23)' : 'rgb(115 115 115)'};`}
+      >
+        all
+      </a>
+      {allTags.map((tag) => (
+        <a
+          href={`/projects?tag=${tag}`}
+          style={`font-family: ui-monospace, monospace; font-size: 0.75rem; text-decoration: none; color: ${selectedTag === tag ? 'rgb(23 23 23)' : 'rgb(115 115 115)'};`}
+        >
+          #{tag}
+        </a>
+      ))}
+    </div>
+  )}
+
+  {filtered.length > 0 ? (
+    <div style="display: flex; flex-direction: column;">
+      {filtered.map((project) => (
+        <div style="border-bottom: 1px solid rgb(229 229 229);" class="project-item">
+          <ProjectCard
+            title={project.data.title}
+            description={project.data.description}
+            slug={project.id}
+            tags={project.data.tags}
+            url={project.data.url}
+            github={project.data.github}
+          />
+        </div>
+      ))}
+    </div>
+  ) : (
+    <p style="color: rgb(115 115 115);">No projects found{selectedTag ? ` for #${selectedTag}` : ''}.</p>
+  )}
+</BaseLayout>
+
+<style>
+  .page-h1 {
+    color: rgb(23 23 23);
+  }
+
+  .project-item {
+    border-bottom-color: rgb(229 229 229);
+  }
+
+  @media (prefers-color-scheme: dark) {
+    .page-h1 {
+      color: rgb(245 245 245);
+    }
+
+    .project-item {
+      border-bottom-color: rgb(38 38 38);
+    }
+  }
+</style>
