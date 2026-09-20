@@ -1,4 +1,18 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" fill="none">
-  <rect width="32" height="32" rx="8" fill="#18181b"/>
-  <text x="16" y="23" font-family="monospace" font-size="18" font-weight="bold" fill="#3b82f6" text-anchor="middle">A</text>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" fill="none">
+  <rect x="4" y="4" width="56" height="56" rx="6" fill="#1a1a1a" stroke="#d8c9a8" stroke-width="2"/>
+  <rect x="9" y="9" width="46" height="46" rx="3" stroke="#6b83c4" stroke-width="1.6"/>
+  <g stroke="#d8b34a" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M16 12l4 6l4-6"/>
+    <path d="M28 12l4 6l4-6"/>
+    <path d="M40 12l4 6l4-6"/>
+    <path d="M16 52l4-6l4 6"/>
+    <path d="M28 52l4-6l4 6"/>
+    <path d="M40 52l4-6l4 6"/>
+    <path d="M12 18l6 4l-6 4"/>
+    <path d="M12 30l6 4l-6 4"/>
+    <path d="M46 22l6-4l-6-4"/>
+    <path d="M46 42l6-4l-6-4"/>
+  </g>
+  <text x="32" y="39" fill="#f2f2f2" font-family="Georgia, serif" font-size="20" font-weight="600" text-anchor="middle">AS</text>
+  <path d="M25 44c4-8 10-8 14 0M32 43c-3-5-3-10 0-15c3 5 3 10 0 15z" stroke="#cc5b8d" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>
 </svg>

@@ -1,0 +1,63 @@
+---
+title: "Building Fluffy"
+description: "A living map of the tiny React framework I am building to understand routing, SSR, and hydration."
+updatedAt: 2026-09-20
+tags: ["fluffy", "react", "frameworks"]
+order: 3
+---
+
+Fluffy is a tiny React framework built for learning.
+
+The point is not to compete with production frameworks. The point is to make the invisible machinery visible: file-based routing, server rendering, client hydration, CLI commands, app scaffolding, and the small contracts that make a framework feel real.
+
+The boundary matters.
+
+Fluffy owns the framework layer:
+
+- route discovery
+- route matching
+- server rendering orchestration
+- browser hydration
+- CLI commands
+- app scaffolding
+- examples that exercise the public contract
+
+Fluffy does not need to own everything:
+
+- bundling
+- TypeScript transformation
+- hot module replacement
+- React rendering internals
+- production hosting infrastructure
+
+Vite can own the development substrate. React can own rendering. Fluffy should own the stitching.
+
+## Why This Exists
+
+Production frameworks hide a lot of decisions for good reasons. That is what makes them useful.
+
+But if you want to understand how routing, SSR, and hydration fit together, the hiding eventually becomes the problem. Fluffy is a way to rebuild the minimum useful slice slowly enough that each decision becomes visible.
+
+The project is also a writing exercise. Each phase should leave behind a clearer explanation than the one I had when I started.
+
+## Current Shape
+
+Phase 1 is about proving one complete path:
+
+```txt
+src/pages/index.tsx
+        |
+        v
+route discovery
+        |
+        v
+request "/" -> route match -> Vite SSR load -> renderToString
+        |
+        v
+HTML + client entry
+        |
+        v
+browser imports same page -> hydrateRoot(...)
+```
+
+That is the smallest version of the framework that can teach the core idea.

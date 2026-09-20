@@ -1,0 +1,44 @@
+---
+title: "Frontend platform R&D"
+description: "The work behind internal frameworks, developer foundations, and product architecture."
+updatedAt: 2026-09-20
+tags: ["platform", "architecture", "frameworks"]
+order: 1
+---
+
+Frontend platform work sits between product engineering and systems design.
+
+It is not only about making reusable components or choosing framework defaults. The real job is building the foundation other developers use to ship product work: application scaffolding, build contracts, runtime conventions, infrastructure hooks, observability, documentation, migration paths, and the rules that keep a large frontend ecosystem navigable.
+
+The work usually starts with a small question:
+
+- How should a new app be created?
+- Where should runtime configuration come from?
+- What should the framework own, and what should the product own?
+- How do we make the correct thing easier than the clever thing?
+- How does a platform stay flexible without becoming vague?
+
+The answer is rarely a single library. It is a contract.
+
+Good platform contracts remove decisions from product teams without removing their agency. They make the common path boring, but they still leave enough escape hatches for real product constraints.
+
+That is the part I enjoy most: finding the shape of the contract.
+
+## What Makes It R&D
+
+The interesting work usually begins where the existing abstractions stop helping.
+
+Sometimes that means reading framework internals. Sometimes it means building prototypes that should never become production code. Sometimes it means testing an idea against one real application until the idea breaks, then reshaping the contract around what the application taught you.
+
+R&D, in this context, does not mean detached research. It means practical exploration under production constraints.
+
+The output is not just code. It is a clearer model of the problem.
+
+## What I Keep Coming Back To
+
+- A framework is a set of promises before it is a set of packages.
+- Defaults are product decisions disguised as technical decisions.
+- The platform should make easy things easy and dangerous things visible.
+- Documentation is part of the runtime contract, not a separate chore.
+- Migration paths are features.
+- If a team has to understand the platform internals to use the platform safely, the interface is not finished.

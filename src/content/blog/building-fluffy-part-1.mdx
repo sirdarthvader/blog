@@ -1,0 +1,302 @@
+---
+title: "Building Fluffy, Part 1: The Smallest Useful React Framework"
+description: "Fluffy is a learning-focused React framework. Phase 1 builds the first complete slice: scaffolding, file-based routing, server rendering, hydration, testing, and release automation."
+publishedAt: 2026-09-20
+tags: ["react", "frameworks", "systems", "engineering"]
+draft: true
+---
+
+Most side projects do not die because the code is impossible.
+
+They die because the project never becomes small enough to finish.
+
+Fluffy had that smell when I came back to it. It had the shape of a framework repo: a pnpm workspace, separate packages, Changesets, a CLI package, a core package, and a scaffolder. But it did not yet have a clear proof. It did not answer the one question every learning project has to answer:
+
+What is this trying to teach?
+
+The answer I settled on was deliberately smaller than "build a React framework." Fluffy should demonstrate how file-based routing, server rendering, and browser hydration fit together. Not image optimization. Not React Server Components. Not deployment adapters. Not a plugin system.
+
+Just the smallest vertical slice that makes a framework feel real.
+
+That became Phase 1.
+
+By the end of this phase, a developer can scaffold a Fluffy app, run `fluffy dev`, create a page in `src/pages`, see it render on the server, and watch the browser hydrate the same component.
+
+This post is the story of building that slice, including the turns that did not survive unchanged.
+
+## The Thesis Had To Get Smaller
+
+"Build a React framework" sounds exciting until you try to use it as a plan.
+
+It does not tell you what belongs in the first milestone. It does not tell you where to stop. It does not tell you which hard problems are central to the project and which ones are only attractive distractions.
+
+So the first real decision was not technical. It was editorial:
+
+> Fluffy demonstrates how a React framework stitches together file-based routing, server rendering, and browser hydration, using Vite as the build and development substrate.
+
+That sentence did a lot of work.
+
+It made routing, SSR, and hydration the center of the project. It also made several tempting things explicitly out of scope: static generation, React Server Components, image optimization, API routes, nested layouts, deployment adapters, and custom bundling.
+
+Everything Next.js does is not a roadmap. It is a trap.
+
+The point of Fluffy is not to prove I can make a worse version of a production framework. The point is to pull apart the concepts that production frameworks bundle together and make the connection between them visible.
+
+## From Scratch Is A Boundary
+
+There is a romantic version of "from scratch" that turns every learning project into a compiler project.
+
+Want to understand frameworks? First write a bundler. Then a dev server. Then a transpiler. Then a plugin system. Then maybe, if the project survives long enough, write the framework part.
+
+That is not the boundary I wanted.
+
+Fluffy owns the framework layer:
+
+- file-based routing conventions
+- route discovery
+- server rendering orchestration
+- browser hydration
+- CLI commands
+- app scaffolding
+- documentation and release cadence
+
+Fluffy does not own the platform plumbing:
+
+- bundling
+- TypeScript transformation
+- hot module replacement
+- package installation
+- React rendering internals
+- production hosting infrastructure
+
+Vite owns bundling and development middleware. React and React DOM own rendering. Node and Express are acceptable server plumbing while the framework interface is still taking shape.
+
+This is not cheating. It is focus.
+
+If the goal is to understand how frameworks stitch routing, SSR, and hydration together, writing a bundler first would bury the interesting part under unrelated complexity.
+
+From scratch is not a purity contest. It is a boundary.
+
+## One Vertical Slice Beats Ten Half Features
+
+Phase 1 had one user-visible promise:
+
+1. Scaffold an app with `create-fluffy-app`.
+2. Start it with `fluffy dev`.
+3. Add a page in `src/pages`.
+4. See that page render on the server.
+5. See the same page hydrate in the browser.
+
+That is not a long feature list, but it is a complete path.
+
+This matters more than it sounds. A framework does not become understandable by having many disconnected features. It becomes understandable when one complete request can be followed end to end.
+
+For Fluffy, that path looks like this:
+
+```txt
+src/pages/index.tsx
+        |
+        v
+route discovery
+        |
+        v
+request "/" -> route match -> Vite SSR load -> renderToString
+        |
+        v
+HTML + /@fluffy/client-entry
+        |
+        v
+browser imports same page -> hydrateRoot(...)
+```
+
+That diagram is the whole phase.
+
+Everything else exists to make that path real enough for someone else to try.
+
+## The Package Shape
+
+The project kept the package split it already had:
+
+- `@fluffy/core` contains the framework runtime, routing, SSR, hydration, and dev server.
+- `@fluffy/cli` contains developer commands such as `fluffy dev`.
+- `create-fluffy-app` scaffolds a new app.
+- `examples/minimal` is the first downstream consumer.
+
+That last one is important.
+
+The example app is not a cute demo folder. It is the first app that has to live with Fluffy's public contract. If the core package changes, the example app should feel it. If the CLI breaks, the example app should fail. If hydration stops being wired correctly, the example app should expose that.
+
+A framework contract is imaginary until an app consumes it.
+
+## Route Files Become Routes
+
+The first framework job is discovery.
+
+Fluffy walks the app's `src/pages` directory and turns files into route records. `src/pages/index.tsx` becomes `/`. A nested `index` file maps to the folder path. Dynamic segments such as `[id]` become `:id`, and catch-all segments become `*`.
+
+In Phase 1, this route record is intentionally small. It needs the URL path, the server-side component path, the browser import path, and a flag that notices whether the page exports `getServerProps`.
+
+That last flag is a seed for Phase 2. Phase 1 records it, but does not execute server data yet.
+
+This is a useful pattern for learning projects: leave yourself a named next step without letting it hijack the current milestone.
+
+## The Server Loads The Page
+
+Once a request arrives, the dev server generates the route manifest, matches the request path, and asks Vite to load the matched page module for SSR.
+
+That Vite detail is doing a lot for us. It means the framework can load TypeScript and TSX page files in development without owning the transformation pipeline. Fluffy can focus on the framework decision:
+
+What page does this URL mean, and how do we render it?
+
+The renderer is deliberately boring. It expects the page module to default export a React component. If it does, Fluffy calls `renderToString` and gets HTML back. If it does not, the route is invalid.
+
+That HTML then gets wrapped in a minimal document:
+
+```html
+<div id="root">...</div>
+<script type="module" src="/@fluffy/client-entry"></script>
+```
+
+That is the server half of the contract. The browser half still has to pick up the same page instead of replacing it with a different app.
+
+## Hydration Is The Other Half Of SSR
+
+Server rendering is easy to explain badly.
+
+It is tempting to say "the server sends HTML" and stop there. But that is only half of what a React framework has to do.
+
+The browser has to load the matching page module and hydrate the existing HTML with the same component. If the server and browser disagree about the page, the whole abstraction breaks.
+
+Fluffy handles this in development with a Vite virtual module at `/@fluffy/client-entry`. The server generates that module from the current route manifest. In the browser, it uses `import.meta.glob` to make the app's page files importable, matches `window.location.pathname`, finds the same page module, and calls `hydrateRoot`.
+
+This is the moment Phase 1 starts to feel like a framework instead of a server that returns strings.
+
+The same convention is now visible in both places:
+
+- the server uses page files to choose what HTML to send
+- the browser uses page files to choose what component to hydrate
+
+That shared convention is the beginning of the framework.
+
+## The CLI Became Part Of The Teaching Surface
+
+The early CLI could have been a thin command parser. For Phase 1, it only needed `fluffy dev` and a `--port` flag. That is small enough that almost anything would work.
+
+But a framework CLI is not only about parsing flags. It is also about feedback.
+
+We used Clack so the command feels like a modern developer tool. When the dev server starts, the CLI shows progress, reports the URL, and warns if the requested port was busy.
+
+The port behavior is a good example of framework UX hiding in a small detail.
+
+The first pass could have failed when the requested port was taken. That would have been simple, and also annoying. The better Phase 1 behavior is:
+
+1. Try the requested port.
+2. If it is busy, try the next one.
+3. Keep going until a free port is found.
+4. Tell the developer which port was actually used.
+
+There is still a real TODO here. If the port is busy because the same app is already running, maybe the CLI should reuse that server instead of starting another one. That is a sharper behavior question for later.
+
+For now, the framework removes a little friction without pretending the problem is fully solved.
+
+Framework DX is the accumulation of tiny decisions that remove friction.
+
+## The Example App Replaced Temporary Confidence
+
+Testing a framework with a temporary folder is useful for the first hour.
+
+After that, it starts to lie.
+
+A temporary smoke app proves that something worked once. A permanent example app proves that the public contract still works after the next change.
+
+So `examples/minimal` became part of the repo shape. The smoke test builds the framework packages, starts the example app through the CLI, requests the root page, checks that server-rendered HTML is present, checks that the hydration script exists, and checks that the generated client entry calls `hydrateRoot` and imports the page module.
+
+That is not exhaustive. It does not need to be.
+
+For Phase 1, the smoke test protects the one thing the phase claims to have built: the route, SSR, and hydration pipeline.
+
+## The Source Tree And Package Boundary Are Different Things
+
+One of the less glamorous turns was package output.
+
+The source tree should stay pleasant for maintainers. TypeScript imports should be readable. Package code should be organized by the framework's internal shape.
+
+The published package has a different job. It has to give consumers valid JavaScript, types, and exports that work from a clean install.
+
+That is where `tsup` became the boundary.
+
+Fluffy can write TypeScript internally, then publish built output from `dist`. Package fields such as `main`, `module`, `types`, and `exports` point consumers at that built output instead of leaking the source tree as the package interface.
+
+This also exposed a CI lesson. Local typecheck passed at one point because built `dist` folders existed on my machine. GitHub Actions started from a clean checkout and failed because those artifacts were not there.
+
+The fix was not to trust local state. It was to make the build graph honest: dependency packages have to build before dependents typecheck against them.
+
+Clean CI is a better teacher than a warm local machine.
+
+## Tooling Took A Turn
+
+The linting and formatting setup also changed shape.
+
+The first version was conventional: ESLint plus Prettier. That would have been fine. But for this project, the better fit was Oxlint plus Prettier.
+
+Prettier owns formatting. Oxlint owns fast lint checks. The commands are intentionally plain:
+
+```sh
+pnpm format:check
+pnpm lint
+pnpm fix
+```
+
+`pnpm fix` formats first and then applies autofixable lint changes.
+
+There is no custom linting ecosystem here. There does not need to be one yet. Phase 1 needed fast hygiene, not a tooling cathedral.
+
+This is one of the themes I want to keep repeating through the project: use the amount of machinery that matches the phase.
+
+## Release Automation Is Part Of The Contract
+
+It feels early to care about releases in a learning framework.
+
+It is not.
+
+If the point of the project is to teach in public, the reader should be able to try the thing you are writing about. "Clone my branch and good luck" is not a useful contract.
+
+So Phase 1 includes Changesets, CI checks, package versioning, and npm publishing. The private example app is ignored by Changesets because it is not a package to publish. The release workflow verifies the work, creates version commits, publishes packages, and pushes release tags.
+
+There was also a real release-flow decision hiding in the details.
+
+Publishing directly from a workflow can leave you in an awkward state if npm succeeds but pushing the version commit fails. The safer shape is to push the version commit first, then let the next workflow run publish from the already-versioned `main`.
+
+That way, if npm publishing fails, `main` still contains the version bump. Fix the token or registry problem, rerun publishing, and the repo still knows what version it is trying to release.
+
+A learning framework still needs a real release path.
+
+## What Phase 1 Proves
+
+Phase 1 does not make Fluffy production-ready.
+
+That was never the point.
+
+What it proves is smaller and more useful:
+
+- there is a thesis
+- there is a roadmap
+- there is a package split
+- there is a working app
+- there is a dev server
+- there is file-based route discovery
+- there is server-rendered HTML
+- there is browser hydration
+- there is a smoke test
+- there is CI
+- there is a release path
+
+That is enough for a first phase.
+
+More importantly, it gives the next phase somewhere solid to stand.
+
+Phase 2 is where the framework starts learning about data. A route that can render is interesting. A route that can load server data, serialize it safely, and hydrate without refetching is where framework design gets sharper.
+
+That is the next slice.
+
+Not everything. Just the next thing that teaches something real.

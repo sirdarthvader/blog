@@ -1,0 +1,165 @@
+---
+title: "Building a chess engine"
+description: "Rough notes on board representation, move generation, search, evaluation, and the path from legal moves to an engine that can play."
+updatedAt: 2026-09-20
+tags: ["chess", "algorithms", "systems"]
+order: 5
+---
+
+A chess engine is a small operating system for a board game.
+
+At first it looks like a rules problem: pieces move, kings cannot be left in check, promotions happen on the back rank, castling has conditions, en passant exists because chess wanted one move that feels like a trapdoor.
+
+But the interesting part is not only the rules. The interesting part is that every rule decision affects search. If move generation is slow, the engine cannot look deep. If board state is hard to copy, every branch of the game tree becomes expensive. If legality is unclear, the search starts evaluating impossible worlds.
+
+Reference I want to keep revisiting: [Sebastian Lague's Coding Adventure: Chess](https://www.youtube.com/watch?v=U4ogK0MIzqk).
+
+## What The Video Clarified
+
+The useful arc is not "write a smart engine."
+
+It is:
+
+1. Make chess visible.
+2. Make chess legal.
+3. Make legality testable.
+4. Make search fast enough to matter.
+5. Make evaluation less naive.
+
+The video starts with the most concrete version of the board: 64 squares, light and dark colors from `(file + rank) % 2`, then a 64-number array as the internal board. Pieces are encoded so some bits represent the type and other bits represent the color.
+
+That is a good first lesson: representation is not only storage. It decides which questions are cheap to ask.
+
+## Implementation Details Worth Keeping
+
+- Use FEN early so arbitrary positions can be loaded and tested.
+- Precompute the number of squares to the edge of the board from each square in every direction.
+- Sliding pieces become much easier once directions and edge distances are data.
+- Start with pseudo-legal moves, then filter out moves that leave the king in check.
+- Later, optimize legality by tracking attacked squares, checks, pins, and piece lists.
+- Use perft before trusting the engine.
+- Compare perft output against Stockfish, ideally with per-move breakdowns.
+- Treat castling and en passant as bug magnets.
+- Keep the random-move bot around as a baseline, but expect it to be terrible.
+
+The Stockfish comparison is especially important. A total count tells you something is wrong. A per-move breakdown tells you where to look.
+
+Two bugs from the video are worth remembering:
+
+- If a rook is captured on its original square, castling rights on that side are gone.
+- En passant can be illegal if the capturing pawn was shielding the king from a rook or bishop line.
+
+## The Core Shape
+
+The engine has a few layers:
+
+- Board state: where the pieces are, whose turn it is, castling rights, en passant target, halfmove clock, move number.
+- Move generation: produce pseudo-legal moves for each piece.
+- Legality filtering: remove moves that leave the king in check.
+- Make and unmake: apply a move, then restore the previous state cheaply.
+- Perft: count legal move trees to prove move generation is correct.
+- Evaluation: score a position without searching to the end of the game.
+- Search: explore the game tree and choose the move that leads to the best reachable position.
+
+The clean mental model is:
+
+```txt
+position -> legal moves -> make move -> child position -> score/search -> unmake
+```
+
+Everything depends on that loop being correct.
+
+## Board Representation
+
+Start simple.
+
+A 64-square array is enough to learn the engine. Each square can hold a piece enum or an empty marker. It is easy to print, easy to debug, and easy to reason about.
+
+Bitboards are powerful, but they move complexity earlier. They are probably Phase 2 or Phase 3 unless the goal is raw strength from day one.
+
+The first version should optimize for seeing the system clearly.
+
+## Move Generation
+
+Generate pseudo-legal moves first:
+
+- Pawns: single push, double push from starting rank, captures, promotion, en passant.
+- Knights: fixed offsets.
+- Bishops, rooks, queens: slide until blocked.
+- King: one-square moves, plus castling candidates.
+
+Then filter:
+
+1. Make the move.
+2. Ask whether the moving side's king is attacked.
+3. Keep the move only if the king is safe.
+4. Unmake the move.
+
+This is not the fastest approach, but it is honest and testable.
+
+## Perft Is The Truth Serum
+
+Before the engine tries to be clever, it needs to count.
+
+`perft(depth)` returns the number of legal positions reachable from the current position after `depth` plies. Known chess positions have known perft results, which makes this the best early testing tool.
+
+If perft is wrong, nothing built above it can be trusted.
+
+## Search
+
+The first search can be minimax, but negamax is usually cleaner because chess is symmetric: what is good for one side is bad for the other.
+
+Then add alpha-beta pruning. It does not change the answer. It changes how much of the tree the engine has to inspect before proving the answer.
+
+After that:
+
+- Iterative deepening: search depth 1, then 2, then 3, keeping the best move found so far.
+- Move ordering: search likely-good moves first so alpha-beta cuts more branches.
+- Quiescence search: avoid stopping at tactical explosions, especially captures.
+- Transposition table: cache positions already seen through another move order.
+
+The engine gets stronger less by "thinking like a human" and more by refusing to waste time.
+
+The video has a lovely concrete measurement here: an unoptimized depth-four search evaluates millions of positions, alpha-beta cuts that down sharply, and move ordering cuts it down again by a ridiculous amount. Same result, much less work.
+
+## Evaluation
+
+The first evaluator can be tiny:
+
+- material balance
+- piece-square tables
+- mobility
+- king safety
+- pawn structure
+
+Material alone is enough to make the search coherent. Piece-square tables make it look less random. Everything after that should be earned by testing.
+
+The most useful evaluation ideas from the video:
+
+- Material is the first signal.
+- Quiescence search makes material evaluation less foolish by avoiding noisy capture positions.
+- Endgames need special incentives: push the enemy king toward an edge or corner, and bring your own king closer when mating material exists.
+- Openings need piece-square tables or an opening book; otherwise the engine shuffles because the payoff is too far beyond its search horizon.
+- King safety and pawn structure are obvious next weaknesses.
+
+## The Blog Version
+
+The note is the map. The blog should be the guided build:
+
+1. Build the board.
+2. Load positions from FEN.
+3. Generate pseudo-legal moves.
+4. Filter legal moves with check detection.
+5. Verify with perft and Stockfish.
+6. Add a random bot as a baseline.
+7. Add material evaluation.
+8. Add negamax.
+9. Add alpha-beta pruning.
+10. Add move ordering.
+11. Add quiescence search.
+12. Add endgame heuristics.
+13. Add transposition tables with Zobrist hashing.
+14. Add piece-square tables and a tiny opening book.
+15. End with a small playable engine and a list of remaining weaknesses.
+
+The essay should not pretend to build Stockfish. The better story is smaller: build an engine whose decisions are understandable.

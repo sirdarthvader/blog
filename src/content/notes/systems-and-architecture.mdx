@@ -1,0 +1,37 @@
+---
+title: "Systems and architecture"
+description: "Working notes on boundaries, contracts, scale, and how software changes over time."
+updatedAt: 2026-09-20
+tags: ["systems", "architecture", "engineering"]
+order: 4
+---
+
+Architecture is mostly about making change survivable.
+
+The diagrams matter less than the contracts people actually depend on: module boundaries, naming, test shape, deployment behavior, data ownership, failure modes, and the small conventions that decide whether a codebase can be navigated under pressure.
+
+The lesson large systems keep teaching me is that understanding everything is not the goal.
+
+Navigability is the goal.
+
+## Working Principles
+
+- Prefer contracts that are small, stable, and honest.
+- Make the common path obvious.
+- Treat naming as architecture.
+- Optimize for partial understanding.
+- Avoid abstractions that require callers to know what they hide.
+- Keep migration paths visible.
+- Delete code when the system can prove it is unused.
+- Write tests that explain the contract, not only the implementation.
+
+## Questions I Like
+
+- What does this module promise?
+- Who depends on this behavior?
+- What breaks if this changes?
+- Is this complexity essential or accidental?
+- Can a new person make a correct change here with partial context?
+- Where does the system fail when it is under stress?
+
+These are not abstract questions. They show up in everyday engineering work, especially in large codebases where local correctness is not enough.
