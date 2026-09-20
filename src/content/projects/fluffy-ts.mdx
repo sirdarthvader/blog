@@ -1,0 +1,67 @@
+---
+title: "fluffy-ts"
+description: "A tiny learning-focused React framework for understanding file-based routing, server rendering, hydration, CLI tooling, and package publishing."
+publishedAt: 2026-09-20
+tags: ["fluffy", "react", "frameworks", "typescript", "npm"]
+github: "https://github.com/sirdarthvader/fluffy"
+url: "https://sirdarthvader.github.io/fluffy/"
+featured: true
+draft: false
+---
+
+## Overview
+
+fluffy-ts is a small React framework built for learning.
+
+It is not trying to compete with production frameworks. The goal is more useful
+than that: rebuild one complete vertical slice slowly enough that the parts
+become visible.
+
+The first milestone answers one question:
+
+> What has to happen for a file in `src/pages` to become server-rendered HTML
+> and then hydrate in the browser?
+
+## What it includes
+
+The project is split into a few focused packages:
+
+- `@fluffy-ts/core` owns routing, SSR, hydration, and the development server.
+- `@fluffy-ts/cli` exposes developer commands such as `fluffy dev`.
+- `@fluffy-ts/create-app` scaffolds new projects.
+
+Vite owns the bundling and dev-server substrate. React owns rendering. fluffy-ts
+owns the framework stitching: route discovery, request handling, rendering,
+client entry generation, and the browser hydration path.
+
+## Phase 1
+
+Phase 1 is the smallest useful framework loop:
+
+```txt
+create app
+    |
+    v
+fluffy dev
+    |
+    v
+src/pages/index.tsx
+    |
+    v
+server render -> HTML -> client entry -> hydrateRoot
+```
+
+That path now exists as a working slice, with tests, an example app fixture,
+Changesets, GitHub workflow automation, and npm publishing infrastructure around
+it.
+
+## Writing
+
+I am writing about the build as I go:
+
+- [Building Fluffy](/notes/building-fluffy)
+- [Building Fluffy, Part 1: The Smallest Useful React Framework](/blog/building-fluffy-part-1)
+
+The long-term idea is to turn the framework into both a working package and a
+teaching artifact: something small enough to inspect, but real enough to explain
+why frameworks are shaped the way they are.
