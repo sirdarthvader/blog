@@ -15,7 +15,14 @@ interface Props {
 const { title, description, publishedAt, updatedAt, tags } = Astro.props;
 ---
 
-<BaseLayout title={title} description={description} article publishedAt={publishedAt}>
+<BaseLayout
+  title={title}
+  description={description}
+  article
+  publishedAt={publishedAt}
+  updatedAt={updatedAt}
+  tags={tags}
+>
   <article>
     <header style="margin-bottom: 2.5rem;">
       <a href="/blog" class="back-link">← Writing</a>
