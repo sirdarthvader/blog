@@ -1,0 +1,5 @@
+User-agent: *
+Allow: /
+Disallow: /*?tag=
+
+Sitemap: https://promax.dev/sitemap-index.xml

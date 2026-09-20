@@ -15,7 +15,7 @@ const filtered = selectedTag
   : projects;
 ---
 
-<BaseLayout title="Projects" description="Things I've built.">
+<BaseLayout title="Projects" description="Things I've built." noindex={Boolean(selectedTag)}>
   <HomeBackLink />
   <header style="margin-bottom: 2.5rem;">
     <h1 style="font-size: 1.25rem; font-weight: 500; margin-bottom: 0.5rem; color: var(--text-heading);">Projects</h1>
@@ -34,7 +34,7 @@ const filtered = selectedTag
       </a>
       {allTags.map((tag) => (
         <a
-          href={`/projects?tag=${tag}`}
+          href={`/tags/${encodeURIComponent(tag)}`}
           style={`font-family: ui-monospace, monospace; font-size: 0.75rem; text-decoration: none; color: ${selectedTag === tag ? '#f8dc48' : 'var(--text-nav)'};`}
         >
           #{tag}
