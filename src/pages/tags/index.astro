@@ -1,5 +1,6 @@
 ---
 import BaseLayout from '../../layouts/BaseLayout.astro';
+import HomeBackLink from '../../components/HomeBackLink.astro';
 import { getCollection } from 'astro:content';
 
 const showDrafts = import.meta.env.DEV || import.meta.env.MODE === 'localhost';
@@ -23,6 +24,7 @@ const tags = [...tagCounts.entries()]
 ---
 
 <BaseLayout title="Tags" description="Browse writing, notes, and projects by topic.">
+  <HomeBackLink />
   <header style="margin-bottom: 2.5rem;">
     <h1 style="font-size: 1.25rem; font-weight: 500; margin-bottom: 0.5rem; color: var(--text-heading);">Tags</h1>
     <p style="color: var(--text-nav); font-size: 0.9375rem;">

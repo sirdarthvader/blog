@@ -74,7 +74,12 @@ const mediumArticles = [
                 {note.data.title}
               </a>
             </li>
-          ))}
+            ))}
+            <li>
+              <a href={`/notes`} onclick={`window.trackSiteEvent?.('homepage_note_click', { note: 'homepage_note_click' })`}>
+                All Notes...
+              </a>
+            </li>
         </ul>
       </section>
 
@@ -95,7 +100,10 @@ const mediumArticles = [
                 })}
               </time>
             </a>
-          ))}
+            ))}
+            <a href={`/blog`} onclick={`window.trackSiteEvent?.('homepage_blog_click', { post: 'homepage_blog_click' })`}>
+              All Blogs...
+            </a>
         </div>
       </section>
 
@@ -122,6 +130,7 @@ const mediumArticles = [
 
       <section class="section small-links" aria-label="Elsewhere">
         <a href="/about">About</a>
+        <a href="/projects">Projects</a>
         <a href="https://github.com/sirdarthvader" target="_blank" rel="noopener noreferrer">GitHub</a>
         <a href="https://linkedin.com/in/ashish-nandan-singh" target="_blank" rel="noopener noreferrer">LinkedIn</a>
       </section>
