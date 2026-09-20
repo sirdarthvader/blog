@@ -1,6 +1,7 @@
 ---
 import BaseLayout from '../../layouts/BaseLayout.astro';
 import PostCard from '../../components/PostCard.astro';
+import HomeBackLink from '../../components/HomeBackLink.astro';
 import { getCollection } from 'astro:content';
 
 const showDrafts = import.meta.env.DEV || import.meta.env.MODE === 'localhost';
@@ -16,6 +17,7 @@ const posts = selectedTag
 ---
 
 <BaseLayout title="Writing" description="Articles on development, research, and ideas." noindex={Boolean(selectedTag)}>
+  <HomeBackLink />
   <header style="margin-bottom: 2.5rem;">
     <h1 style="font-size: 1.25rem; font-weight: 500; margin-bottom: 0.5rem; color: var(--text-heading);">Writing</h1>
     <p style="color: var(--text-nav); font-size: 0.9375rem;">
