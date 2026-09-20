@@ -4,7 +4,8 @@ import TagList from '../../components/TagList.astro';
 import { getCollection, render } from 'astro:content';
 
 export async function getStaticPaths() {
-  const projects = await getCollection('projects', ({ data }) => !data.draft);
+  const showDrafts = import.meta.env.DEV || import.meta.env.MODE === 'localhost';
+  const projects = await getCollection('projects', ({ data }) => showDrafts || !data.draft);
   return projects.map((project) => ({
     params: { slug: project.id },
     props: { project },

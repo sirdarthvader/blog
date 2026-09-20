@@ -6,7 +6,7 @@ import sitemap from "@astrojs/sitemap";
 
 // https://astro.build/config
 export default defineConfig({
-  site: "https://yoursite.com", // update when you have a domain
+  site: "https://promax.dev",
   vite: {
     plugins: [tailwindcss()],
   },

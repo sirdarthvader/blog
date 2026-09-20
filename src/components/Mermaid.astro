@@ -1,0 +1,38 @@
+---
+interface Props {
+  chart: string;
+  title?: string;
+}
+
+const { chart, title } = Astro.props;
+---
+
+<figure class="mermaid-figure">
+  {title && <figcaption>{title}</figcaption>}
+  <pre class="mermaid">{chart.trim()}</pre>
+  <script is:inline>
+    (() => {
+      const script = document.currentScript;
+      const figure = script?.closest?.('.mermaid-figure');
+      const diagram = figure?.querySelector?.('.mermaid');
+      if (!diagram) return;
+
+      window.__loadMermaid ||= import('https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.esm.min.mjs')
+        .then(({ default: mermaid }) => {
+          mermaid.initialize({
+            startOnLoad: false,
+            securityLevel: 'strict',
+            theme: window.matchMedia?.('(prefers-color-scheme: dark)').matches ? 'dark' : 'default',
+            fontFamily: '"STIX Two Text", Georgia, serif',
+          });
+          return mermaid;
+        });
+
+      window.__loadMermaid
+        .then((mermaid) => mermaid.run({ nodes: [diagram] }))
+        .catch(() => {
+          diagram.dataset.mermaidFailed = 'true';
+        });
+    })();
+  </script>
+</figure>

@@ -1,0 +1,72 @@
+---
+const analyticsEnabled =
+  import.meta.env.PROD && import.meta.env.PUBLIC_ANALYTICS_DISABLED !== 'true';
+const gaMeasurementId = import.meta.env.PUBLIC_GA_MEASUREMENT_ID;
+const plausibleDomain = import.meta.env.PUBLIC_PLAUSIBLE_DOMAIN;
+const plausibleSrc =
+  import.meta.env.PUBLIC_PLAUSIBLE_SRC || 'https://plausible.io/js/script.outbound-links.js';
+---
+
+{
+  analyticsEnabled && gaMeasurementId && (
+    <>
+      <script async src={`https://www.googletagmanager.com/gtag/js?id=${gaMeasurementId}`}></script>
+      <script is:inline define:vars={{ gaMeasurementId }}>
+        window.dataLayer = window.dataLayer || [];
+        function gtag() {
+          window.dataLayer.push(arguments);
+        }
+        gtag('js', new Date());
+        gtag('config', gaMeasurementId);
+
+        window.trackSiteEvent = function(eventName, params) {
+          gtag('event', eventName, params || {});
+        };
+
+        document.addEventListener('click', function(event) {
+          const link = event.target?.closest?.('a[href]');
+          if (!link) return;
+
+          const url = new URL(link.href, window.location.href);
+          const isExternal = url.hostname !== window.location.hostname;
+          if (!isExternal) return;
+
+          window.trackSiteEvent('outbound_link_click', {
+            link_url: url.href,
+            link_text: link.textContent?.trim().slice(0, 80) || '',
+          });
+        });
+      </script>
+    </>
+  )
+}
+
+{
+  analyticsEnabled && !gaMeasurementId && plausibleDomain && (
+    <>
+      <script defer data-domain={plausibleDomain} src={plausibleSrc}></script>
+      <script is:inline>
+        window.plausible = window.plausible || function() {
+          (window.plausible.q = window.plausible.q || []).push(arguments);
+        };
+        window.trackSiteEvent = function(eventName, params) {
+          window.plausible(eventName, { props: params || {} });
+        };
+
+        document.addEventListener('click', function(event) {
+          const link = event.target?.closest?.('a[href]');
+          if (!link) return;
+
+          const url = new URL(link.href, window.location.href);
+          const isExternal = url.hostname !== window.location.hostname;
+          if (!isExternal) return;
+
+          window.trackSiteEvent('outbound_link_click', {
+            link_url: url.href,
+            link_text: link.textContent?.trim().slice(0, 80) || '',
+          });
+        });
+      </script>
+    </>
+  )
+}

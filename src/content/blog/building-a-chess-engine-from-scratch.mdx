@@ -1,0 +1,510 @@
+---
+title: "Building a Chess Engine From Scratch"
+description: "A practical blueprint for building a small chess engine: board state, legal move generation, perft testing, evaluation, search, and the first strength improvements."
+publishedAt: 2026-03-18
+tags: ["chess", "algorithms", "systems", "engineering"]
+draft: true
+---
+
+Building a chess engine sounds like building intelligence.
+
+The first surprise is that most of the early work has nothing to do with intelligence. Before the engine can choose a good move, it has to know what a legal move is. Before it can search ahead, it has to apply and undo moves without corrupting the board. Before it can become clever, it has to become correct.
+
+That is what makes chess engines such a good programming project. The subject looks romantic from the outside, but the implementation is wonderfully mechanical: state representation, exhaustive generation, recursive search, scoring functions, caching, and performance work.
+
+This is the blueprint I would use to build a small engine from scratch.
+
+The goal is not to recreate Stockfish. The goal is to build something understandable: an engine that can play legal chess, search a few moves ahead, and explain why the architecture has the shape it does.
+
+This outline follows the ground-up arc from Sebastian Lague's excellent [Coding Adventure: Chess](https://www.youtube.com/watch?v=U4ogK0MIzqk): start with a visible board, make the rules legal, prove the move generator, then slowly teach the engine to search and evaluate.
+
+The important lesson from that journey is that a chess engine is not born clever. It becomes less foolish one constraint at a time.
+
+## Start With The Position
+
+The engine's entire world is the current position.
+
+A position needs more than the pieces on the board:
+
+- pieces on 64 squares
+- side to move
+- castling rights
+- en passant target square
+- halfmove clock
+- fullmove number
+
+That list is the first contract. If any of it is missing, some legal chess position cannot be represented correctly.
+
+For a first engine, I would use a 64-square array:
+
+```ts
+type Color = 'white' | 'black';
+type PieceType = 'pawn' | 'knight' | 'bishop' | 'rook' | 'queen' | 'king';
+
+type Piece = {
+  color: Color;
+  type: PieceType;
+};
+
+type Square = Piece | null;
+
+type Position = {
+  board: Square[];
+  sideToMove: Color;
+  castling: {
+    whiteKingSide: boolean;
+    whiteQueenSide: boolean;
+    blackKingSide: boolean;
+    blackQueenSide: boolean;
+  };
+  enPassantSquare: number | null;
+  halfmoveClock: number;
+  fullmoveNumber: number;
+};
+```
+
+This is not the fastest representation. That is fine.
+
+Bitboards are where many strong engines eventually go, because a 64-bit integer can represent a set of squares and make move generation extremely fast. But bitboards also make the first version harder to debug. The first version should be optimized for learning and correctness.
+
+You can always replace the board representation later if the rest of the engine has clean boundaries.
+
+The first version should also speak FEN.
+
+FEN looks cryptic at first, but it is just a compact way to describe a chess position. It lets you load the starting position, weird test positions, endgames, puzzles, and known perft positions without manually placing pieces.
+
+That matters because a chess engine is impossible to test seriously if it can only start from the normal initial board.
+
+## Precompute Board Geometry
+
+The board is tiny, but geometry bugs are everywhere.
+
+A useful trick is to precompute how many squares exist from each square to the edge of the board in each direction.
+
+From any square:
+
+- rooks move along orthogonal directions
+- bishops move along diagonal directions
+- queens use both
+
+If the engine already knows "from this square, there are three squares north and five squares east," sliding move generation becomes a clean loop instead of a pile of boundary checks.
+
+This is the kind of small data structure that makes the rest of the program calmer.
+
+## Represent Moves Explicitly
+
+A move is not just "from square to square."
+
+Some moves carry extra meaning:
+
+- captures
+- promotions
+- en passant
+- castling
+- double pawn pushes that create an en passant target
+
+So the move type should make special cases explicit:
+
+```ts
+type MoveFlag =
+  | 'quiet'
+  | 'capture'
+  | 'double-pawn-push'
+  | 'king-side-castle'
+  | 'queen-side-castle'
+  | 'en-passant'
+  | 'promotion'
+  | 'promotion-capture';
+
+type Move = {
+  from: number;
+  to: number;
+  flag: MoveFlag;
+  promotion?: Exclude<PieceType, 'pawn' | 'king'>;
+};
+```
+
+This keeps the rules visible. If move application has to infer too much from the board, the engine becomes harder to reason about.
+
+## Generate Pseudo-Legal Moves First
+
+Move generation is easier in two phases.
+
+First, generate pseudo-legal moves. These are moves that follow piece movement rules but may leave the king in check.
+
+Pawns move forward, capture diagonally, promote on the final rank, and sometimes capture en passant. Knights use fixed offsets. Bishops, rooks, and queens slide until they hit the edge of the board or another piece. Kings move one square, with castling added as a special case.
+
+This phase should not try to be too clever.
+
+The job is to enumerate candidates.
+
+```txt
+for each piece belonging to sideToMove:
+  generate moves based on piece type
+  reject moves that land on friendly pieces
+  include captures against enemy pieces
+```
+
+Then comes the legality filter.
+
+## Legal Moves Are Pseudo-Legal Moves That Keep The King Safe
+
+A legal move is a pseudo-legal move that does not leave your own king in check.
+
+The simplest legality algorithm is:
+
+```txt
+legalMoves(position):
+  moves = []
+
+  for move in pseudoLegalMoves(position):
+    undo = makeMove(position, move)
+
+    if ownKingIsSafe(position):
+      moves.push(move)
+
+    unmakeMove(position, move, undo)
+
+  return moves
+```
+
+This is not the most optimized way to generate legal moves, but it is a beautiful first implementation because it matches the rule exactly.
+
+The important helper is `isSquareAttacked(position, square, byColor)`. Once you can answer that question, you can detect checks, validate castling paths, and filter illegal moves.
+
+This simple approach is a good first version, even though it is a little brute force.
+
+The optimized version comes later:
+
+- track attacked squares
+- track whether the king is in check
+- track checking lines that can be blocked
+- track pins so pinned pieces only move along legal lines
+- track piece locations instead of scanning all 64 squares every time
+
+That sequence is important. First make legality obvious. Then make it fast.
+
+## Make And Unmake Must Be Boring
+
+Search will make and unmake millions of moves.
+
+That means this code should be painfully explicit. A move changes piece placement, side to move, castling rights, en passant square, clocks, and sometimes rook position. Unmaking must restore all of it.
+
+The usual pattern is to return an undo record:
+
+```ts
+type Undo = {
+  capturedPiece: Piece | null;
+  previousCastling: Position['castling'];
+  previousEnPassantSquare: number | null;
+  previousHalfmoveClock: number;
+  previousFullmoveNumber: number;
+};
+```
+
+Then `unmakeMove` does not recompute old state. It restores it.
+
+This is one of those places where cleverness is a liability. If the board cannot be trusted after unmaking a move, the search will hallucinate positions.
+
+## Prove Move Generation With Perft
+
+Before writing evaluation or search, write `perft`.
+
+`perft(depth)` counts how many legal positions can be reached from the current position after a given number of plies.
+
+```txt
+perft(position, depth):
+  if depth == 0:
+    return 1
+
+  nodes = 0
+
+  for move in legalMoves(position):
+    undo = makeMove(position, move)
+    nodes += perft(position, depth - 1)
+    unmakeMove(position, move, undo)
+
+  return nodes
+```
+
+Known chess positions have known perft counts. That turns move generation into something testable.
+
+This is the turning point in the project. Until perft passes, the engine is not ready to think.
+
+The most useful debugging version is "divide" perft: print the count for each legal root move, then compare that output with Stockfish.
+
+If the total is wrong, you know the move generator is broken. If the per-move breakdown differs, you know which move family to inspect.
+
+The classic traps are exactly the rules people half-remember:
+
+- Castling rights disappear if the rook moves, but also if the rook is captured on its original square.
+- En passant can expose a rook or bishop attack on the king, making the capture illegal.
+- Pinned pieces may look mobile, but their movement is constrained by the line between attacker and king.
+
+These are not edge cases in the dismissive sense. They are the rules that force the engine to model chess precisely.
+
+## Add The Smallest Evaluation Function
+
+Once the engine can generate legal positions, it needs a way to score them.
+
+The first evaluator can be material only:
+
+```ts
+const pieceValue = {
+  pawn: 100,
+  knight: 320,
+  bishop: 330,
+  rook: 500,
+  queen: 900,
+  king: 0,
+};
+```
+
+Score white material minus black material, then return the score from the perspective of the side to move.
+
+This will already play something recognizable. It will capture free pieces. It will avoid losing queens. It will still make strange positional choices, but that is fine. The evaluator is allowed to start simple.
+
+After material, add piece-square tables. A knight in the center is usually better than a knight on the rim. A pawn close to promotion is more valuable than a pawn still at home. Piece-square tables encode those preferences without making the evaluator complicated.
+
+The early evaluator might include:
+
+- material
+- piece-square tables
+- mobility
+- king safety
+- pawn structure
+
+Each addition should earn its place by improving play or making the engine's choices easier to understand.
+
+One useful endgame tweak is a "mop-up" score. If one side has enough material to win, reward positions where the enemy king is pushed toward the edge or corner, and where the attacking king moves closer to help cut off escape squares.
+
+That tiny heuristic can turn aimless rook shuffling into actual checkmates.
+
+## Search With Negamax
+
+Minimax is the basic idea: choose the move that maximizes your score, assuming the opponent chooses the move that minimizes it.
+
+Negamax is the same idea written in a cleaner form. Chess is zero-sum, so a position that is good for one player is equally bad for the other.
+
+```txt
+search(position, depth):
+  if depth == 0:
+    return evaluate(position)
+
+  best = -infinity
+
+  for move in legalMoves(position):
+    undo = makeMove(position, move)
+    score = -search(position, depth - 1)
+    unmakeMove(position, move, undo)
+
+    best = max(best, score)
+
+  return best
+```
+
+To choose a move, search each legal move and keep the one with the best score.
+
+At this point the engine is real. Not strong, but real.
+
+It can look ahead. It can sacrifice a piece if the result is better a few moves later. It can avoid immediate blunders. The intelligence is not magic. It is recursion plus a scoring function.
+
+Before search, a random bot is a useful baseline. It proves the move generator can drive a complete game, and it gives you something obviously bad to improve against.
+
+Watching two random bots play is also a good reminder that legal chess and sensible chess are very different things.
+
+## Alpha-Beta Pruning Makes Search Practical
+
+Plain negamax wastes time on branches that cannot affect the final decision.
+
+Alpha-beta pruning fixes that. It keeps two bounds:
+
+- alpha: the best score the current side can already guarantee
+- beta: the score the opponent can already avoid allowing
+
+If a branch proves worse than something already found, stop searching it.
+
+```txt
+search(position, depth, alpha, beta):
+  if depth == 0:
+    return evaluate(position)
+
+  best = -infinity
+
+  for move in orderedLegalMoves(position):
+    undo = makeMove(position, move)
+    score = -search(position, depth - 1, -beta, -alpha)
+    unmakeMove(position, move, undo)
+
+    best = max(best, score)
+    alpha = max(alpha, score)
+
+    if alpha >= beta:
+      break
+
+  return best
+```
+
+Alpha-beta does not change the answer. It changes how quickly the engine can prove the answer.
+
+That distinction matters. The engine gets stronger because it can search deeper in the same amount of time.
+
+The video demonstrates this beautifully: a pure depth-four search evaluates millions of positions, alpha-beta cuts the work sharply, and good move ordering cuts it again by an enormous margin.
+
+Same result. Less tree.
+
+## Move Ordering Is Quietly Huge
+
+Alpha-beta is only as good as move ordering.
+
+If the engine searches strong moves first, it finds good bounds early and prunes more of the tree. If it searches weak moves first, alpha-beta has less to prune.
+
+Simple move ordering gets you far:
+
+- captures before quiet moves
+- most valuable victim, least valuable attacker
+- promotions early
+- checks early
+- best move from the previous iterative-deepening pass first
+- avoid moves that place pieces on squares attacked by enemy pawns
+
+This is a recurring pattern in chess engines: the idea is simple, but the compounding effect is enormous.
+
+## Add Iterative Deepening
+
+Instead of searching directly to depth 5, search depth 1, then 2, then 3, and continue until time runs out.
+
+This sounds wasteful because earlier searches are repeated. In practice, it helps because each completed search improves move ordering for the next depth.
+
+It also gives the engine a usable time-control story. If the clock expires, play the best move from the last completed depth.
+
+```txt
+bestMove = null
+
+for depth in 1..maxDepth:
+  result = searchRoot(position, depth)
+  bestMove = result.move
+
+  if timeIsUp():
+    break
+
+return bestMove
+```
+
+This turns the engine from a toy into something that can play under constraints.
+
+## Add Quiescence Search
+
+A fixed-depth search has a problem: it might stop in the middle of a tactical exchange.
+
+Imagine the engine sees that it can win a queen, but it stops before noticing that the queen is protected and the recapture loses even more material. The evaluation at that leaf is noisy because the position is unstable.
+
+Quiescence search extends the search through forcing moves, usually captures, until the position becomes quieter.
+
+The goal is not to search forever. The goal is to avoid evaluating positions where the board is obviously still exploding.
+
+In the first version, searching captures is enough to teach the idea. Later, checks can be added too, but captures alone already fixes many ridiculous material evaluations.
+
+## Add A Transposition Table
+
+Chess positions can be reached through different move orders.
+
+A transposition table stores previously evaluated positions so the engine does not solve the same subtree repeatedly.
+
+The usual key is a Zobrist hash: a compact hash of the pieces, side to move, castling rights, and en passant state.
+
+The table can store:
+
+- depth searched
+- score
+- bound type
+- best move
+
+This is the first feature where the engine starts to feel serious. Search stops being only a tree and starts behaving more like a graph.
+
+There is a funny bargain here: a 64-bit hash has an enormous number of possible values, but chess has even more possible positions. Collisions are possible. In practice, engines accept the risk because the speed is worth it.
+
+Chess programming contains a surprising amount of "live with the tiny fear because the alternative is too slow."
+
+## Improve The Opening
+
+Search has a horizon.
+
+In the opening, many good moves only become obviously good much later. A shallow engine does not naturally know that development, center control, and king safety matter unless the evaluator tells it.
+
+Piece-square tables are the first nudge:
+
+- knights prefer central squares
+- kings prefer safety in the opening and middlegame
+- pawns can be encouraged toward useful structures
+- pieces can be discouraged from passive home-square shuffling
+
+Another pragmatic trick is a tiny opening book. Load a collection of grandmaster games and, for the first few moves, pick a plausible move from positions that appear in those games.
+
+That does not make the engine understand openings. It gives the engine enough borrowed structure to reach positions where its search starts to matter.
+
+## The Implementation Plan
+
+I would build the engine in phases:
+
+1. Board and FEN parsing
+2. Pseudo-legal move generation
+3. Legal move filtering
+4. Make and unmake
+5. Perft tests against known positions
+6. Material evaluation
+7. Negamax search
+8. Alpha-beta pruning
+9. Move ordering
+10. Iterative deepening with a time limit
+11. Quiescence search
+12. Transposition table
+13. Endgame mop-up evaluation
+14. Piece-square tables
+15. Small opening book
+16. Iterative deepening with a time limit
+17. UCI protocol support
+18. A small UI or CLI for playing against it
+
+The order is intentional. Do not start with the UI. Do not start with clever evaluation. Do not start with performance tricks.
+
+Start with correctness. Then search. Then strength.
+
+## What Would Still Be Weak
+
+Even after all of this, the engine will still have very obvious weaknesses.
+
+King safety is hard. A naive evaluator often thinks everything is fine until a mating attack is already too close. Then it starts sacrificing material because the search finally sees disaster.
+
+Pawn structure is also hard. Passed pawns, isolated pawns, doubled pawns, backward pawns, pawn majorities, king opposition in pawn endings: these ideas are not captured well by material counting and simple piece-square tables.
+
+That is the honest stopping point for a first serious version.
+
+It can play. It can search. It can punish simple mistakes. It can solve some endgames with the right heuristics. But it still does not understand chess the way strong engines do.
+
+And that is fine. The project has already done its real job: it has made the path from rules to search to strength visible.
+
+## What This Project Teaches
+
+A chess engine is a compact lesson in systems thinking.
+
+The board representation affects move generation. Move generation affects search speed. Search speed affects how much the evaluator matters. Evaluation affects move ordering. Move ordering affects pruning. Pruning affects depth. Depth changes what the engine appears to understand.
+
+There is no single magic layer.
+
+The engine becomes good when many small contracts cooperate:
+
+- legal moves are correct
+- state transitions are reversible
+- tests can catch rule bugs
+- search can stop wasting time
+- evaluation gives the search a useful signal
+- time control makes the engine practical
+
+That is why I want to build one.
+
+Not because chess is unsolved in practice. Strong engines already exist.
+
+I want to build one because the path from rules to search to strength is visible. You can start with a board array and end with a program that makes decisions you did not explicitly script.
+
+That is a rare kind of project: small enough to build, deep enough to keep teaching.

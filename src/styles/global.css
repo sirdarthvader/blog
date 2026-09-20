@@ -11,6 +11,7 @@
     --text-nav-hover: #f2f2f2;
     --border: #2d2d2d;
     --code-bg: #222222;
+    --illustration: #8d8981;
   }
 
   html {
@@ -37,6 +38,57 @@
 
   a:hover {
     text-decoration-color: var(--text-nav);
+  }
+
+  mark {
+    background: rgba(248, 220, 72, 0.72);
+    border-radius: 0.08em;
+    color: #161611;
+    display: inline;
+    font-style: italic;
+    line-height: 1;
+    padding: 0.08em 0.14em 0.1em;
+    text-shadow: 0 1px 0 rgba(0, 0, 0, 0.22);
+    box-decoration-break: clone;
+    -webkit-box-decoration-break: clone;
+  }
+
+  .site-shell {
+    width: 100%;
+    max-width: 36rem;
+    margin-left: auto;
+    margin-right: auto;
+    padding: 2rem 1.5rem 5rem;
+  }
+
+  .site-shell-wide {
+    max-width: 82rem;
+  }
+
+  .site-nav {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+    margin-bottom: 3rem;
+  }
+
+  .site-links a {
+    color: var(--text-nav);
+    text-decoration: none;
+  }
+
+  .site-mark {
+    display: inline-flex;
+    color: var(--text-heading);
+    text-decoration: none;
+    transition: opacity 150ms, transform 150ms;
+  }
+
+  .site-mark:hover {
+    color: var(--text-heading);
+    opacity: 0.86;
+    transform: translateY(-1px);
   }
 
   /* Prose styles for blog posts */
@@ -142,5 +194,36 @@
   .prose strong {
     color: var(--text-heading);
     font-weight: 600;
+  }
+
+  .mermaid-figure {
+    margin: 2rem -1.5rem;
+    border-top: 1px solid var(--border);
+    border-bottom: 1px solid var(--border);
+    padding: 1.25rem 1.5rem;
+    overflow-x: auto;
+  }
+
+  .mermaid-figure figcaption {
+    color: var(--text-nav);
+    font-size: 0.875rem;
+    margin-bottom: 1rem;
+  }
+
+  .mermaid-figure .mermaid {
+    display: flex;
+    justify-content: center;
+    min-width: 28rem;
+    margin: 0;
+    background: transparent;
+    border: 0;
+    padding: 0;
+  }
+
+  .mermaid-figure .mermaid[data-mermaid-failed="true"] {
+    display: block;
+    color: var(--text-nav);
+    font-family: ui-monospace, monospace;
+    white-space: pre;
   }
 }

@@ -3,7 +3,8 @@ import BaseLayout from '../../layouts/BaseLayout.astro';
 import ProjectCard from '../../components/ProjectCard.astro';
 import { getCollection } from 'astro:content';
 
-const projects = (await getCollection('projects', ({ data }) => !data.draft))
+const showDrafts = import.meta.env.DEV || import.meta.env.MODE === 'localhost';
+const projects = (await getCollection('projects', ({ data }) => showDrafts || !data.draft))
   .sort((a, b) => b.data.publishedAt.valueOf() - a.data.publishedAt.valueOf());
 
 const allTags = [...new Set(projects.flatMap((p) => p.data.tags))].sort();

@@ -1,89 +1,288 @@
 ---
 title: "Why Programmers Should Study Physics"
-description: "Physics isn't just for scientists. The way physicists model systems, reason about uncertainty, and find elegant invariants has direct applications to how we build software."
+description: "Physics teaches habits programmers need badly: invariants, useful approximations, dimensional thinking, phase transitions, and respect for entropy."
 publishedAt: 2026-02-03
 tags: ["physics", "systems", "thinking"]
 draft: false
 ---
 
-I studied physics alongside programming for a while, not because I planned to switch fields, but because I was curious and couldn't stop. At some point I realized the two weren't as separate as I thought. The way physicists think — the actual cognitive habits, not the math — kept showing up in the problems I was solving as a programmer.
+I did not study physics because I had a noble plan.
 
-I'm not suggesting you memorize projectile motion formulas. I mean something more specific: the mental models physicists use to approach complex systems are directly applicable to software, and most programmers never encounter them.
+I studied it because I was curious, slightly stubborn, and apparently the kind of person who looks at free time and thinks, "What if I used this to feel mathematically inadequate?"
 
-Here's what I've actually borrowed.
+But the strange thing is that physics kept improving how I wrote software.
 
-## Finding What Stays the Same
+Not because I started calculating projectile motion in TypeScript. Nobody needs a parabolic arc in their login flow. The useful part was the way physics trains you to think: find invariants, name assumptions, estimate before measuring, respect units, and stay suspicious of systems that behave smoothly until they very much do not.
 
-The most powerful tool in physics is identifying **conserved quantities** — things that don't change as a system evolves. Energy. Momentum. Charge. When you're confused about what a system is doing, find what's conserved. It cuts through a lot of noise.
+Programming has more in common with physics than it first admits.
 
-I started thinking about software invariants the same way.
+Both involve building models of messy systems and then being surprised when reality files a bug report.
 
-An invariant is a property that must always be true. A sorted array must stay sorted. In my monorepo dependency graph, edges must always point from dependent to dependency — never in a cycle. In the chess engine, the evaluation function must return a value from the same range regardless of position depth. These are conserved quantities. If something breaks, a useful first question is: *which invariant was violated, and where?*
+## Find What Stays The Same
 
-The physics habit is to **name the conserved quantity before you code the dynamics.** I've started doing this explicitly when designing data structures. What must always be true about this? Write it down. Assert it at boundaries. The bugs you prevent this way are some of the hardest bugs to find when you don't.
+Physics loves conserved quantities.
 
-## Units as Types
+Energy. Momentum. Charge. Things that remain constant even while everything else is moving around and causing drama.
 
-Before running an experiment, physicists check that equations are dimensionally consistent. You can't add a velocity to a mass — the units don't match, so you've made an error before you've even tried any numbers.
+Software has the same idea. We call them invariants because "conserved quantities" would make sprint planning sound too cool.
 
-Programmers have types, but we under-use them this way.
+An invariant is something that must always be true:
 
-The textbook example is the Mars Climate Orbiter — it crashed in 1999 because one team used metric units and another used imperial. Both stored as plain floats. No compiler error. $327 million into a crater.
+- a sorted list stays sorted
+- a cache key maps to the data shape it promises
+- a graph that claims to be a DAG has no cycles
+- a chess position never has two white kings
+- a route manifest maps one URL pattern to one handler
 
-I've made smaller versions of this mistake. Functions taking `timeoutMs` and `timeoutSeconds` both typed as `number`. It works until it doesn't. The fix is cheap: a nominal type alias — `type Milliseconds = number & { readonly _brand: 'ms' }` — costs almost nothing and makes the mismatch a compile error instead of a runtime mystery.
+When a system is confusing, invariants give you something solid to hold.
 
-Physicists would never let this slip. They're trained from day one to carry units through every calculation and check that they cancel correctly. We should be doing this with our types.
+```txt
+Before coding the behavior:
 
-## Models Are Wrong — That's Fine
+  What must always be true?
+        |
+        v
+  Where can it be violated?
+        |
+        v
+  How do we assert it at the boundary?
+```
 
-"All models are wrong, but some are useful." This is physics doctrine. A physicist studying planetary motion ignores the gravitational effect of distant asteroids — too small to matter. The model is wrong. It's also accurate enough to land a probe on Mars.
+That last question matters. An invariant you never check is basically a motivational quote.
 
-I used to think this was a compromise. Now I think it's the skill.
+I like writing invariants down before writing the moving parts. It changes the design. Instead of asking "how do I implement this?", you ask "what state should be impossible?"
 
-When I'm building something, I try to state my model's assumptions explicitly rather than pretending the model is complete. The rate limiter I wrote assumes requests are distributed roughly evenly. That's wrong, but it's useful enough for normal traffic. The cache assumes read patterns are stable. Also wrong, but close enough. The model doesn't need to be true — it needs to be *usefully* wrong, and you need to know which way it's wrong.
+That is a much sharper question.
 
-The failure mode I see most often (in my own code and in codebases I've worked in) is one of two things: over-engineering a model to handle every edge case upfront, or pretending the simple model is the whole truth until production disagrees. Physics teaches a middle path — make the simplifying assumptions explicit, and build the system to tell you when it's operating outside them.
+## Units Are Types With Receipts
 
-## The Back-of-Envelope Habit
+Physicists are trained to carry units through equations.
 
-Physicists estimate before they calculate. Fermi estimation — reasoning from first principles to within an order of magnitude — is a core skill. Is this feasible? Is this worth pursuing?
+You cannot add meters to seconds. You cannot compare kilograms to velocity. If the units do not work, the answer is wrong before you even plug in numbers.
 
-I've made it a habit before any non-trivial performance work. Before I profiled the dependency traversal in the monorepo analyzer, I wrote down: how many packages, how many edges, what traversal depth, what's the theoretical minimum? The estimate was off, but it told me where to look and what a win would actually mean numerically.
+Programmers, meanwhile, will pass `number` into anything and then act betrayed when production discovers the difference between milliseconds and seconds.
 
-The goal isn't precision. It's avoiding being wrong by 1000x, which happens constantly when people skip the estimate entirely and go straight to "let's see what happens."
+The classic horror story is the Mars Climate Orbiter. One system used imperial units, another expected metric, and $327 million went off to become space confetti.
 
-The discipline I took from physics: **write the prediction before you measure.** Not as a performance ritual, but because updating a wrong model is how you build calibrated intuition. If you only look at results without predicting them first, you can't tell whether you actually learned something.
+Most of us will not crash a spacecraft. We will merely do smaller, more affordable nonsense:
 
-## Broken Symmetry as a Code Smell
+```ts
+setTimeout(refreshSession, token.expiresIn);
+```
 
-In physics, symmetry has a precise definition: a transformation that leaves the system unchanged. Noether's theorem connects every symmetry to a conserved quantity — it's one of the deepest results in all of physics. But the practical intuition I stole is simpler: **broken symmetry usually means you haven't found the right formulation yet.**
+Is `expiresIn` seconds? Milliseconds? Minutes? Vibes?
 
-In code, I notice this when I'm writing special-case logic. A function that handles empty arrays differently from non-empty ones. A type that distinguishes null from empty string for no real semantic reason. These are broken symmetries. Sometimes the distinction is real and meaningful. Often it's a sign I haven't found the right abstraction.
+A better model is to make units visible:
 
-When I find myself writing `if (arr.length === 0) { ... } else { ... }` where both branches are almost the same, I stop and ask: is this asymmetry real, or did I just not find the general case? More often than I'd like, the answer is the latter.
+```ts
+type Milliseconds = number & { readonly unit: "ms" };
+type Seconds = number & { readonly unit: "s" };
 
-## Phase Transitions in Production
+function seconds(value: number): Seconds {
+  return value as Seconds;
+}
 
-Water is liquid at 99°C and gas at 100°C. One degree of quantitative change, qualitatively different behavior. Phase transitions are where smooth changes produce discontinuous jumps.
+function toMilliseconds(value: Seconds): Milliseconds {
+  return (value * 1000) as Milliseconds;
+}
+```
 
-I think about this when designing systems now. Not abstractly — concretely.
+This is not about making TypeScript fancy. It is about refusing to let incompatible ideas wear the same costume.
 
-A cache hit rate of 90% vs. 60% is a performance difference. A cache hit rate of 15% might be a different *regime entirely* — where the database can't serve reads fast enough to warm the cache, and the system can't recover without a restart. It phase-transitioned. The fix isn't the same as "make it a bit faster."
+Physics teaches you to ask: what kind of quantity is this?
 
-The question phase transitions trained me to ask: where are the discontinuities in my system's behavior? At what load does "slow" become "down"? What's the slack that absorbs pressure before the system tips — the connection pool headroom, the queue depth, the retry budget? Knowing this isn't just useful for debugging. It's useful for capacity planning and for knowing which metrics actually matter.
+Types should do the same.
 
-## Entropy Is Not a Metaphor
+## Models Are Supposed To Be Wrong
 
-Shannon entropy and thermodynamic entropy are genuinely related — information theory grew out of statistical mechanics. But even ignoring the math, the physical intuition is directly useful: **disorder is the natural direction. Order requires work.**
+One of the most useful physics quotes is:
 
-A codebase I wrote six months ago, untouched, has not stayed the same. The dependencies have new vulnerabilities. The teammates who join don't have the context I had. The patterns that made sense in the original architecture now fit awkwardly in the thing the codebase has become. Its effective entropy has increased — not because anyone wrote bad code, but because the surrounding system evolved.
+> All models are wrong, but some are useful.
 
-Refactoring isn't cleaning up a mess. It's doing the thermodynamic work that keeps the system in a lower-entropy state. If you stop doing it, entropy wins. This isn't a metaphor I find poetic — it's a model I find predictively useful. It tells me that maintenance isn't optional, and that the cost of skipping it compounds.
+At first this sounds like a resignation. It is not. It is permission to simplify on purpose.
 
----
+A model is a controlled lie. The skill is knowing what it lies about.
 
-I didn't set out to import physics into programming. I just kept noticing the same ideas showing up in different notation. Invariants. Conserved quantities. Useful approximations. Symmetry. Phase transitions. Entropy.
+In software, we build models constantly:
 
-The habits of mind that physics trains — comfort with abstraction grounded in something measurable, willingness to make predictions and be wrong about them, instinct for where models break down — these are exactly the habits that separate programmers who understand their systems from those who are just keeping them running.
+- this cache assumes reads are stable
+- this rate limiter assumes traffic is roughly distributed
+- this queue assumes workers eventually catch up
+- this dependency graph assumes imports are statically discoverable
+- this UI state machine assumes users cannot be in two modes at once
 
-You don't need to solve Schrödinger's equation. But spending time with how physicists think is one of the better investments I've made as an engineer.
+All wrong, in some way.
+
+The mature move is not to pretend the model is complete. The mature move is to write down the assumptions and add signals for when they stop holding.
+
+```txt
+Useful model:
+
+  assumption -> implementation -> measurement -> correction
+
+Dangerous model:
+
+  assumption -> implementation -> denial -> incident review
+```
+
+Physics makes peace with approximation. Programmers should too. The goal is not a perfect model. The goal is a model that is accurate enough, cheap enough, and honest about where it breaks.
+
+## Estimate Before You Measure
+
+Physicists estimate constantly.
+
+Not because estimates are perfect, but because being wrong by 10x teaches you something. Being wrong by 1000x teaches you something urgently.
+
+Before doing performance work, I try to write the napkin math first:
+
+```txt
+packages: 45
+avg imports per package: 6
+edges: ~270
+traversal: O(V + E)
+expected runtime: boringly small
+```
+
+If the actual runtime is 3 seconds, something is weird. Maybe I am parsing files repeatedly. Maybe I am hitting the filesystem in a loop. Maybe my "simple graph traversal" has secretly invited the entire monorepo to dinner.
+
+The estimate gives surprise a shape.
+
+Without a prediction, measurement is just a number. With a prediction, measurement becomes feedback.
+
+This habit is small but powerful:
+
+1. Guess the order of magnitude.
+2. Measure.
+3. Ask why the guess was wrong.
+4. Update your intuition.
+
+That loop is how you get calibrated. Also humbled. Often both before lunch.
+
+## Broken Symmetry Is A Smell
+
+In physics, symmetry means a transformation that leaves something unchanged.
+
+In programming, I use a less formal version: if two cases look almost the same but the code treats them wildly differently, I get suspicious.
+
+Sometimes the asymmetry is real. Often it is accidental.
+
+Example:
+
+```ts
+if (items.length === 0) {
+  return renderEmptyState();
+}
+
+return renderList(items);
+```
+
+This might be correct. Empty states are real product states.
+
+But this pattern:
+
+```ts
+if (user.type === "admin") {
+  return getPermissionsFromA(user);
+}
+
+return getPermissionsFromB(user);
+```
+
+should make you pause. Are admins truly a separate model, or did history happen to the codebase and nobody cleaned up after it?
+
+Broken symmetry asks:
+
+```txt
+Are these cases different because the domain says so,
+or because the code drifted?
+```
+
+That question has saved me from many special-case tunnels. You walk into one `if`, and suddenly you are maintaining a museum of exceptions.
+
+## Watch For Phase Transitions
+
+Water at 99 degrees Celsius is hot water.
+
+Water at 100 degrees Celsius is not "slightly hotter water" in the same practical sense. It becomes steam. The system changes regime.
+
+Software does this too.
+
+A queue with 100 jobs is fine. A queue with 10,000 jobs may be a different system. A cache hit rate of 90 percent is healthy. A cache hit rate of 20 percent might mean the database is now the cache, which is a sentence that should make everyone sit up straighter.
+
+```txt
+Smooth change:
+
+  more traffic -> more CPU
+
+Phase transition:
+
+  more traffic -> cache misses -> DB saturation -> retries -> more traffic
+```
+
+The dangerous part is that the graph looks boring until it does not.
+
+So I like asking:
+
+- where does slow become down?
+- where does retry become amplification?
+- where does backlog become permanent?
+- where does memory pressure become a restart loop?
+- where does a harmless migration become a coordinated rollout?
+
+Physics teaches you to look for regime changes. Production teaches you the same thing, but with more Slack notifications.
+
+## Entropy Always Wins Unless You Work
+
+Entropy is not just a fancy way to say "mess."
+
+In software, entropy shows up when the environment around the code changes:
+
+- dependencies age
+- product requirements shift
+- teammates leave
+- new teammates join
+- patterns that once made sense become awkward
+- feature flags outlive the features
+- documentation gets stale
+
+Even untouched code decays in usefulness because the world around it moves.
+
+That is why maintenance is not optional. Refactoring is not vanity. Documentation is not a side quest. Tests are not ceremony.
+
+They are the work required to keep the system ordered.
+
+```txt
+Without maintenance:
+
+  clear model -> exceptions -> folklore -> fear
+
+With maintenance:
+
+  clear model -> drift noticed -> model updated -> trust preserved
+```
+
+Entropy does not make you a bad engineer. It makes you an engineer inside time.
+
+Very rude of time, honestly, but here we are.
+
+## The Point
+
+You do not need to solve Maxwell's equations to become a better programmer.
+
+But physics gives you mental moves that transfer beautifully:
+
+- name what must stay true
+- carry units through the system
+- make useful approximations
+- predict before measuring
+- notice suspicious asymmetry
+- expect phase transitions
+- respect entropy
+
+Those habits make you calmer around complex systems. They make you less likely to worship your first model. They make you more willing to be wrong in a way that teaches you something.
+
+And that might be the most useful part.
+
+Physics does not teach you that the world is simple.
+
+It teaches you how to think clearly when it is not.

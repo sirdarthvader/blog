@@ -1,5 +1,7 @@
 ---
 import '../styles/global.css';
+import Analytics from '../components/Analytics.astro';
+import SiteMark from '../components/SiteMark.astro';
 
 interface Props {
   title: string;
@@ -7,6 +9,7 @@ interface Props {
   ogImage?: string;
   article?: boolean;
   publishedAt?: Date;
+  wide?: boolean;
 }
 
 const {
@@ -15,13 +18,14 @@ const {
   ogImage,
   article = false,
   publishedAt,
+  wide = false,
 } = Astro.props;
 
-const siteUrl = Astro.site ?? 'https://yoursite.com';
+const siteUrl = Astro.site ?? 'https://promax.dev';
 const canonicalURL = new URL(Astro.url.pathname, siteUrl);
 const ogImageURL = ogImage ? new URL(ogImage, siteUrl) : new URL('/og-default.png', siteUrl);
 
-const fullTitle = title === 'Home' ? 'Ashish N Singh' : `${title} — Ashish`;
+const fullTitle = title === 'Home' ? 'Ashish Nandan Singh' : `${title} — Ashish Nandan Singh`;
 const isHome = Astro.url.pathname === '/';
 ---
 
@@ -53,15 +57,18 @@ const isHome = Astro.url.pathname === '/';
     <meta name="twitter:image" content={ogImageURL} />
 
     <!-- RSS -->
-    <link rel="alternate" type="application/rss+xml" title="Your Name — Blog" href="/rss.xml" />
+    <link rel="alternate" type="application/rss+xml" title="Ashish Nandan Singh — Blog" href="/rss.xml" />
 
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <Analytics />
   </head>
   <body>
-    <main style="width: 100%; max-width: 36rem; margin-left: auto; margin-right: auto; padding: 3rem 1.5rem 5rem;">
+    <main class:list={['site-shell', wide && 'site-shell-wide']}>
       {!isHome && (
-        <nav class="mb-8">
-          <a href="/" style="text-decoration: none; color: var(--text-nav); font-size: 0.875rem;">← home</a>
+        <nav class="site-nav" aria-label="Primary navigation">
+          <a class="site-mark" href="/" aria-label="Ashish Nandan Singh home">
+            <SiteMark />
+          </a>
         </nav>
       )}
       <slot />

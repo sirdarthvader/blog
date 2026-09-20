@@ -1,0 +1,46 @@
+---
+title: "Next.js microfrontends"
+description: "Notes on composing independently built Next.js applications into one product."
+updatedAt: 2026-09-20
+tags: ["nextjs", "microfrontends", "architecture"]
+order: 2
+---
+
+Microfrontends sound simple until they meet modern React.
+
+The promise is attractive: let teams build and deploy independently while users experience one product. The difficult part is that a Next.js application is not only a bundle of components. It is routing, server rendering, data fetching, module graphs, RSC payloads, build assumptions, runtime configuration, and a long list of hidden contracts.
+
+The central question is not "can one app load another app?"
+
+The better question is:
+
+> What does the host need to guarantee so a remote can render safely, independently, and predictably?
+
+## The Moving Pieces
+
+- The host owns the product shell, navigation, identity, and composition point.
+- The remote owns a product surface that can evolve on its own.
+- The proxy boundary needs to be explicit and protected.
+- Shared modules need deduplication rules.
+- Server-rendered payloads need a stable transport story.
+- Styling needs isolation strong enough to prevent accidental coupling.
+- Runtime failures need to degrade without taking down the entire product.
+
+None of these are purely frontend concerns. The architecture crosses client code, server code, infrastructure, security, observability, and developer workflow.
+
+## The Hard Part
+
+The hard part is not making a demo work.
+
+The hard part is making the contract boring enough that product teams can use it repeatedly without rediscovering every edge. Demos can ignore auth, caching, error boundaries, deploy skew, tracing, version mismatch, local development, and debugging. A platform cannot.
+
+That is why this work feels closer to research than ordinary feature work. You are not only building a feature; you are discovering which constraints are real.
+
+## Open Questions
+
+- How much should the host know about each remote?
+- Where should routing responsibility sit?
+- What should be shared, and what should be duplicated?
+- How do we debug a request that crosses host and remote boundaries?
+- What should happen when one remote is slow, broken, or deployed out of step?
+- Which parts of the Next.js contract are stable enough to build on top of?
