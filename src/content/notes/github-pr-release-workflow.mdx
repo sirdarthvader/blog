@@ -1,0 +1,76 @@
+---
+title: "GitHub PR and release workflow"
+description: "Notes on the practical loop from local changes to PRs, preview deploys, package publishing, and production deployment."
+updatedAt: 2026-09-20
+tags: ["github", "deployment", "npm", "writing"]
+order: 7
+---
+
+There is a lot of hidden machinery between "the code works on my machine" and "this is live, reviewed, deployed, and safe to talk about."
+
+That machinery is easy to treat as boring admin work:
+
+- create a branch
+- commit the work
+- push it
+- open a pull request
+- wait for checks
+- preview the deployment
+- merge
+- watch production
+- publish the package, if a package is involved
+
+But this loop is one of the most important workflows in modern software. It is the place where code becomes shared reality.
+
+## The shape of the loop
+
+```txt
+local change
+    |
+    v
+branch -> commit -> push
+    |
+    v
+pull request
+    |
+    v
+review + checks + preview deploy
+    |
+    v
+merge
+    |
+    v
+production deploy
+    |
+    v
+observe, fix, or write the next slice
+```
+
+For libraries, there is another branch in the loop:
+
+```txt
+merge
+  |
+  v
+version package -> publish to npm -> verify install path
+```
+
+That extra step matters because publishing a package is not the same as deploying a website. A website can be rolled forward quickly. A package version becomes part of someone else's dependency graph.
+
+## Why this is worth writing about
+
+Most tutorials explain the happy path as if the workflow is obvious.
+
+It is not obvious.
+
+The interesting parts are the small decisions:
+
+- what belongs in one PR
+- how to write a PR description that helps future you
+- why preview deploys are not optional for visual work
+- what checks should block a merge
+- when a package should be published
+- how to verify environment variables without leaking secrets
+- how to avoid treating "green checks" as a substitute for judgment
+
+This should become a polished blog post once the current site overhaul has gone through the full loop.

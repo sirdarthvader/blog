@@ -20,6 +20,7 @@ const { Content } = await render(note);
 <BaseLayout title={note.data.title} description={note.data.description}>
   <article>
     <header style="margin-bottom: 2.5rem;">
+      <a href="/notes" class="back-link">← Notes</a>
       <div style="font-family: ui-monospace, monospace; font-size: 0.875rem; color: var(--text-nav); margin-bottom: 1rem;">
         Note{note.data.updatedAt && <> · Updated <FormattedDate date={note.data.updatedAt} /></>}
       </div>
@@ -29,7 +30,7 @@ const { Content } = await render(note);
       <p style="color: var(--text-nav); font-size: 1.0625rem; line-height: 1.75;">{note.data.description}</p>
       {note.data.tags.length > 0 && (
         <div style="margin-top: 1rem;">
-          <TagList tags={note.data.tags} />
+          <TagList tags={note.data.tags} linkable />
         </div>
       )}
     </header>
@@ -39,3 +40,18 @@ const { Content } = await render(note);
     </div>
   </article>
 </BaseLayout>
+
+<style>
+  .back-link {
+    display: inline-flex;
+    margin-bottom: 1.5rem;
+    color: var(--text-nav);
+    font-family: ui-monospace, monospace;
+    font-size: 0.875rem;
+    text-decoration: none;
+  }
+
+  .back-link:hover {
+    color: var(--text-heading);
+  }
+</style>

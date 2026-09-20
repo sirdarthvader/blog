@@ -1,0 +1,142 @@
+---
+import BaseLayout from '../../layouts/BaseLayout.astro';
+import FormattedDate from '../../components/FormattedDate.astro';
+import { getCollection } from 'astro:content';
+
+export async function getStaticPaths() {
+  const showDrafts = import.meta.env.DEV || import.meta.env.MODE === 'localhost';
+  const [posts, notes, projects] = await Promise.all([
+    getCollection('blog', ({ data }) => showDrafts || !data.draft),
+    getCollection('notes', ({ data }) => showDrafts || !data.draft),
+    getCollection('projects', ({ data }) => showDrafts || !data.draft),
+  ]);
+
+  const items = [
+    ...posts.map((entry) => ({
+      collection: 'Blog',
+      href: `/blog/${entry.id}`,
+      title: entry.data.title,
+      description: entry.data.description,
+      tags: entry.data.tags,
+      date: entry.data.publishedAt,
+    })),
+    ...notes.map((entry) => ({
+      collection: 'Note',
+      href: `/notes/${entry.id}`,
+      title: entry.data.title,
+      description: entry.data.description,
+      tags: entry.data.tags,
+      date: entry.data.updatedAt,
+    })),
+    ...projects.map((entry) => ({
+      collection: 'Project',
+      href: `/projects/${entry.id}`,
+      title: entry.data.title,
+      description: entry.data.description,
+      tags: entry.data.tags,
+      date: entry.data.publishedAt,
+    })),
+  ];
+
+  const tags = [...new Set(items.flatMap((item) => item.tags))];
+
+  return tags.map((tag) => ({
+    params: { tag },
+    props: { tag, items: items.filter((item) => item.tags.includes(tag)) },
+  }));
+}
+
+const { tag, items } = Astro.props;
+const sortedItems = [...items].sort((a, b) => {
+  const aTime = a.date?.valueOf?.() ?? 0;
+  const bTime = b.date?.valueOf?.() ?? 0;
+  return bTime - aTime || a.title.localeCompare(b.title);
+});
+---
+
+<BaseLayout title={`#${tag}`} description={`Writing, notes, and projects tagged ${tag}.`}>
+  <header style="margin-bottom: 2.5rem;">
+    <a href="/tags" class="back-link">← Tags</a>
+    <h1 style="font-size: 1.25rem; font-weight: 500; margin-bottom: 0.5rem; color: var(--text-heading);">#{tag}</h1>
+    <p style="color: var(--text-nav); font-size: 0.9375rem;">
+      {sortedItems.length} {sortedItems.length === 1 ? 'item' : 'items'} tagged with {tag}.
+    </p>
+  </header>
+
+  <div class="tagged-list">
+    {sortedItems.map((item) => (
+      <article class="tagged-item">
+        <a href={item.href}>
+          <div class="item-meta">
+            <span>{item.collection}</span>
+            {item.date && (
+              <>
+                <span>·</span>
+                <FormattedDate date={item.date} />
+              </>
+            )}
+          </div>
+          <h2>{item.title}</h2>
+          <p>{item.description}</p>
+        </a>
+      </article>
+    ))}
+  </div>
+</BaseLayout>
+
+<style>
+  .back-link {
+    display: inline-flex;
+    margin-bottom: 1.5rem;
+    color: var(--text-nav);
+    font-family: ui-monospace, monospace;
+    font-size: 0.875rem;
+    text-decoration: none;
+  }
+
+  .back-link:hover {
+    color: var(--text-heading);
+  }
+
+  .tagged-list {
+    display: flex;
+    flex-direction: column;
+  }
+
+  .tagged-item {
+    border-bottom: 1px solid var(--border);
+    padding: 1.1rem 0;
+  }
+
+  .tagged-item a {
+    text-decoration: none;
+  }
+
+  .tagged-item h2 {
+    color: var(--text-heading);
+    font-size: 1rem;
+    font-weight: 500;
+    line-height: 1.5;
+    margin-bottom: 0.25rem;
+  }
+
+  .tagged-item a:hover h2 {
+    color: var(--text-nav-hover);
+  }
+
+  .tagged-item p {
+    color: var(--text-nav);
+    font-size: 0.9375rem;
+    line-height: 1.625;
+  }
+
+  .item-meta {
+    display: flex;
+    align-items: center;
+    gap: 0.45rem;
+    color: #f8dc48;
+    font-family: ui-monospace, monospace;
+    font-size: 0.75rem;
+    margin-bottom: 0.35rem;
+  }
+</style>

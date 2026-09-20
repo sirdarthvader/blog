@@ -1,0 +1,104 @@
+---
+title: "From Local Change to Shipped Software"
+description: "A practical explanation of the GitHub PR, preview deployment, merge, production deploy, and npm publish loop."
+publishedAt: 2026-09-20
+tags: ["github", "deployment", "npm", "engineering"]
+draft: true
+---
+
+There is a moment in every project where the hard part is no longer writing code.
+
+The hard part is getting the code from your machine into the world without lying to yourself about what happened along the way.
+
+That is the job of the shipping loop: branch, commit, PR, checks, preview, merge, deploy, observe, and sometimes publish.
+
+This post is a draft map for explaining that loop.
+
+## The Problem
+
+Most people learn Git and deployment as separate chores.
+
+Git is the thing with branches and commits.
+
+CI is the thing that goes red at the worst possible time.
+
+Preview deployments are the nice link Netlify or Vercel gives you.
+
+npm publish is the scary command that makes a package version real.
+
+But in real project work, these are not separate chores. They are one workflow.
+
+## The Core Loop
+
+```txt
+local change
+    |
+    v
+branch -> commit -> push
+    |
+    v
+pull request
+    |
+    v
+automated checks + human review + preview deploy
+    |
+    v
+merge
+    |
+    v
+production deploy
+    |
+    v
+observe and decide the next slice
+```
+
+The useful thing about this loop is not bureaucracy. The useful thing is that every step changes the kind of confidence you have.
+
+Local development tells you the idea can work.
+
+The commit tells you what changed.
+
+The PR tells other people what to inspect.
+
+Checks tell you the obvious breakages did not happen.
+
+Preview deploys tell you what the browser actually sees.
+
+Production tells you whether the world agrees.
+
+## Where Package Publishing Differs
+
+Web deploys and package publishes look similar from far away, but they have different blast radiuses.
+
+A website deploy updates a running surface you control.
+
+An npm package release creates a version other people can depend on.
+
+That means package publishing deserves a slightly slower checklist:
+
+- Is the version right?
+- Is the changelog understandable?
+- Does the package install cleanly?
+- Are generated files included?
+- Are private files excluded?
+- Can a new project use it without relying on local state?
+
+Once a package is published, the version is part of history. You can deprecate it. You can publish a fix. But you cannot pretend it never existed.
+
+## The Post I Want This To Become
+
+The final version should not be a generic "how to use GitHub" article.
+
+It should be a practical explanation of the workflow using one real project slice:
+
+1. Build something locally.
+2. Make the commit tell the story.
+3. Open the PR with enough context.
+4. Read the preview deploy like a reviewer.
+5. Merge only after the system has had a chance to disagree.
+6. Watch production.
+7. Publish packages only when the artifact deserves a version.
+
+The point is simple: shipping is not one command.
+
+Shipping is a sequence of claims, and every step should make one claim easier to trust.

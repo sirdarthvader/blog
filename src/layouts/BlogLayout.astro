@@ -18,6 +18,7 @@ const { title, description, publishedAt, updatedAt, tags } = Astro.props;
 <BaseLayout title={title} description={description} article publishedAt={publishedAt}>
   <article>
     <header style="margin-bottom: 2.5rem;">
+      <a href="/blog" class="back-link">← Writing</a>
       <div style="font-family: ui-monospace, monospace; font-size: 0.875rem; color: var(--text-nav); margin-bottom: 1rem; display: flex; align-items: center; gap: 0.5rem;">
         <FormattedDate date={publishedAt} />
         {updatedAt && (
@@ -33,7 +34,7 @@ const { title, description, publishedAt, updatedAt, tags } = Astro.props;
       <p style="color: var(--text-nav); font-size: 1.0625rem; line-height: 1.75;">{description}</p>
       {tags.length > 0 && (
         <div style="margin-top: 1rem;">
-          <TagList tags={tags} />
+          <TagList tags={tags} linkable />
         </div>
       )}
     </header>
@@ -47,3 +48,18 @@ const { title, description, publishedAt, updatedAt, tags } = Astro.props;
     </footer>
   </article>
 </BaseLayout>
+
+<style>
+  .back-link {
+    display: inline-flex;
+    margin-bottom: 1.5rem;
+    color: var(--text-nav);
+    font-family: ui-monospace, monospace;
+    font-size: 0.875rem;
+    text-decoration: none;
+  }
+
+  .back-link:hover {
+    color: var(--text-heading);
+  }
+</style>

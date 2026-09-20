@@ -1,0 +1,78 @@
+---
+import BaseLayout from '../../layouts/BaseLayout.astro';
+import { getCollection } from 'astro:content';
+
+const showDrafts = import.meta.env.DEV || import.meta.env.MODE === 'localhost';
+const [posts, notes, projects] = await Promise.all([
+  getCollection('blog', ({ data }) => showDrafts || !data.draft),
+  getCollection('notes', ({ data }) => showDrafts || !data.draft),
+  getCollection('projects', ({ data }) => showDrafts || !data.draft),
+]);
+
+const tagCounts = new Map<string, number>();
+
+for (const entry of [...posts, ...notes, ...projects]) {
+  for (const tag of entry.data.tags) {
+    tagCounts.set(tag, (tagCounts.get(tag) ?? 0) + 1);
+  }
+}
+
+const tags = [...tagCounts.entries()]
+  .map(([tag, count]) => ({ tag, count }))
+  .sort((a, b) => a.tag.localeCompare(b.tag));
+---
+
+<BaseLayout title="Tags" description="Browse writing, notes, and projects by topic.">
+  <header style="margin-bottom: 2.5rem;">
+    <h1 style="font-size: 1.25rem; font-weight: 500; margin-bottom: 0.5rem; color: var(--text-heading);">Tags</h1>
+    <p style="color: var(--text-nav); font-size: 0.9375rem;">
+      Browse writing, notes, and projects by topic.
+    </p>
+  </header>
+
+  <div class="tag-grid">
+    {tags.map(({ tag, count }) => (
+      <a href={`/tags/${encodeURIComponent(tag)}`} class="tag-card">
+        <span>#{tag}</span>
+        <small>{count} {count === 1 ? 'item' : 'items'}</small>
+      </a>
+    ))}
+  </div>
+</BaseLayout>
+
+<style>
+  .tag-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(10rem, 1fr));
+    gap: 0.75rem;
+  }
+
+  .tag-card {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 0.75rem;
+    border: 1px solid rgba(248, 220, 72, 0.24);
+    border-radius: 0.35rem;
+    background: rgba(248, 220, 72, 0.08);
+    padding: 0.7rem 0.8rem;
+    color: #f8dc48;
+    text-decoration: none;
+  }
+
+  .tag-card:hover {
+    border-color: rgba(248, 220, 72, 0.58);
+    background: rgba(248, 220, 72, 0.16);
+  }
+
+  .tag-card span {
+    font-family: ui-monospace, monospace;
+    font-size: 0.875rem;
+  }
+
+  .tag-card small {
+    color: var(--text-nav);
+    font-size: 0.75rem;
+    white-space: nowrap;
+  }
+</style>

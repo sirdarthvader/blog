@@ -4,24 +4,55 @@ interface Props {
   linkable?: boolean;
 }
 
-const { tags, linkable = false } = Astro.props;
+const { tags, linkable = true } = Astro.props;
 ---
 
-<ul style="display: flex; flex-wrap: wrap; gap: 0.5rem; padding: 0; list-style: none;">
+<ul class="tag-list">
   {tags.map((tag) => (
     <li>
       {linkable ? (
         <a
-          href={`/blog?tag=${tag}`}
-          style="font-family: ui-monospace, monospace; font-size: 0.75rem; text-decoration: none; color: var(--text-nav);"
+          href={`/tags/${encodeURIComponent(tag)}`}
+          class="tag-pill"
         >
           #{tag}
         </a>
       ) : (
-        <span style="font-family: ui-monospace, monospace; font-size: 0.75rem; color: var(--text-nav);">
+        <span class="tag-pill">
           #{tag}
         </span>
       )}
     </li>
   ))}
 </ul>
+
+<style>
+  .tag-list {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    padding: 0;
+    list-style: none;
+  }
+
+  .tag-pill {
+    display: inline-flex;
+    align-items: center;
+    min-height: 1.55rem;
+    padding: 0.16rem 0.45rem 0.2rem;
+    border: 1px solid rgba(248, 220, 72, 0.38);
+    border-radius: 999px;
+    background: rgba(248, 220, 72, 0.14);
+    color: #f8dc48;
+    font-family: ui-monospace, monospace;
+    font-size: 0.75rem;
+    line-height: 1;
+    text-decoration: none;
+  }
+
+  a.tag-pill:hover {
+    border-color: rgba(248, 220, 72, 0.68);
+    background: rgba(248, 220, 72, 0.24);
+    color: #ffe86d;
+  }
+</style>
