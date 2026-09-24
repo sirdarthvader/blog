@@ -1,0 +1,158 @@
+---
+title: "Doubly Linked Lists"
+seoTitle: "Doubly Linked Lists Explained: Previous and Next Pointers"
+description: "Learn how doubly linked lists work, why prev pointers help, and why bidirectional references make mutation more delicate."
+publishedAt: 2026-01-27
+updatedAt: 2026-09-24
+tags: ["algorithms", "data-structures", "systems"]
+draft: false
+story:
+  id: "linked-lists"
+  role: "chapter"
+  order: 5
+  parent: "linked-lists-for-programmers"
+  dependsOn:
+    - "singly-linked-lists"
+---
+
+A doubly linked list adds one more reference.
+
+Instead of each node only knowing the next node, each node knows both directions:
+
+```txt
+null <- [A] <-> [B] <-> [C] -> null
+```
+
+Each node has:
+
+```txt
+value
+next
+prev
+```
+
+In TypeScript:
+
+```ts
+type Node<T> = {
+  value: T;
+  next: Node<T> | null;
+  prev: Node<T> | null;
+};
+```
+
+That extra `prev` reference changes what the list is good at.
+
+## Why Add `prev`?
+
+In a singly linked list, moving backward is not natural.
+
+If you are at `C`:
+
+```txt
+[A] -> [B] -> [C]
+```
+
+there is no direct way to find `B`.
+
+You must start again from `head`.
+
+In a doubly linked list:
+
+```txt
+[A] <-> [B] <-> [C]
+```
+
+`C.prev` points to `B`.
+
+That makes backward movement cheap.
+
+It also makes deletion easier when you already have the node.
+
+## Deleting A Known Node
+
+Suppose you have this:
+
+```txt
+[A] <-> [B] <-> [C]
+```
+
+To delete `B`, connect `A` and `C`:
+
+```txt
+[A] <-> [C]
+```
+
+Code:
+
+```ts
+function remove<T>(node: Node<T>): void {
+  if (node.prev) {
+    node.prev.next = node.next;
+  }
+
+  if (node.next) {
+    node.next.prev = node.prev;
+  }
+
+  node.prev = null;
+  node.next = null;
+}
+```
+
+There are more references to update, but you no longer need to search for the previous node.
+
+The node already knows it.
+
+## The Cost
+
+Doubly linked lists are more flexible than singly linked lists.
+
+They also have more overhead.
+
+Each node stores an extra reference:
+
+```txt
+prev
+```
+
+Each mutation must preserve two directions:
+
+```txt
+next points forward
+prev points backward
+```
+
+If you update one direction and forget the other, the list becomes inconsistent.
+
+That is the tradeoff:
+
+```txt
+more navigation power
+more mutation responsibility
+more memory per node
+```
+
+## Where Doubly Linked Lists Help
+
+Doubly linked lists are useful when you need frequent local moves in both directions.
+
+Examples:
+
+```txt
+LRU cache ordering
+undo/redo navigation
+browser history style movement
+deques
+some memory allocators
+```
+
+They are not the default sequence structure.
+
+They are a specialized tool for cases where bidirectional local rewiring is actually useful.
+
+That is the pattern with linked lists in general:
+
+do not choose them because they sound fundamental.
+
+Choose them when the relationships between neighboring nodes are the thing you need to control.

@@ -1,0 +1,195 @@
+---
+title: "Topological Sort and Build Order"
+seoTitle: "Topological Sort Explained: Build Order and Dependency Graphs"
+description: "Learn topological sort with dependency graphs, build order examples, in-degree, Kahn's algorithm, and cycle detection."
+publishedAt: 2026-01-19
+updatedAt: 2026-09-24
+tags: ["algorithms", "data-structures", "systems"]
+draft: false
+story:
+  id: "graphs"
+  role: "chapter"
+  order: 7
+  parent: "understanding-graphs-for-programmers"
+  dependsOn:
+    - "detecting-cycles-in-graphs"
+---
+
+Some graph questions are about reachability:
+
+```txt
+Can I get there?
+```
+
+Topological sort asks a different question:
+
+```txt
+In what order can I do these things so every dependency comes first?
+```
+
+Build systems ask this.
+
+Migration runners ask this.
+
+Package managers ask this.
+
+Humans ask this when they start assembling furniture and realize step 8 needed something from step 2.
+
+## The Shape It Needs
+
+Topological sort works on a directed acyclic graph.
+
+Directed because dependencies point somewhere:
+
+```txt
+ui-kit -> shared-utils
+```
+
+Acyclic because circular dependencies make a clean order impossible:
+
+```txt
+ui-kit -> shared-utils -> ui-kit
+```
+
+If everything depends on something that depends back on it, there is no honest first step.
+
+## Flip The Meaning For Build Order
+
+Be careful with edge meaning.
+
+If you store:
+
+```txt
+app -> ui-kit
+ui-kit -> shared-utils
+```
+
+That means:
+
+```txt
+app depends on ui-kit
+ui-kit depends on shared-utils
+```
+
+The build order should be:
+
+```txt
+shared-utils
+ui-kit
+app
+```
+
+So for build order, it is often convenient to work with edges that point from dependency to dependent:
+
+```txt
+shared-utils -> ui-kit -> app
+```
+
+Same relationship. Different direction for the question you are asking.
+
+## Kahn's Algorithm
+
+Kahn's algorithm is a practical way to explain topological sort:
+
+```txt
+1. Count the in-degree of every node.
+2. Start with nodes whose in-degree is 0.
+3. Remove one ready node.
+4. Reduce the in-degree of its neighbors.
+5. When a neighbor reaches 0, it becomes ready.
+```
+
+In-degree counts how many prerequisites a node still has.
+
+If in-degree is zero, the node is ready.
+
+Example:
+
+```txt
+shared-utils -> ui-kit -> checkout-app
+types -----------------> checkout-app
+```
+
+Valid build order:
+
+```txt
+shared-utils
+types
+ui-kit
+checkout-app
+```
+
+There can be more than one valid order.
+
+The rule is simply:
+
+```txt
+dependencies before dependents
+```
+
+## The Code
+
+```ts
+function topologicalSort(graph: Map<string, string[]>): string[] | null {
+  const inDegree = new Map<string, number>();
+
+  for (const node of graph.keys()) {
+    inDegree.set(node, 0);
+  }
+
+  for (const neighbors of graph.values()) {
+    for (const neighbor of neighbors) {
+      inDegree.set(neighbor, (inDegree.get(neighbor) ?? 0) + 1);
+    }
+  }
+
+  const ready: string[] = [];
+
+  for (const [node, degree] of inDegree) {
+    if (degree === 0) ready.push(node);
+  }
+
+  const order: string[] = [];
+
+  while (ready.length > 0) {
+    const node = ready.shift()!;
+    order.push(node);
+
+    for (const neighbor of graph.get(node) ?? []) {
+      inDegree.set(neighbor, inDegree.get(neighbor)! - 1);
+
+      if (inDegree.get(neighbor) === 0) {
+        ready.push(neighbor);
+      }
+    }
+  }
+
+  return order.length === graph.size ? order : null;
+}
+```
+
+Returning `null` means the graph had a cycle.
+
+The algorithm could not finish because some nodes never reached in-degree zero.
+
+They were trapped waiting on each other.
+
+## Why This Matters
+
+Topological sort is one of the places where graph theory feels immediately practical.
+
+It is not abstract.
+
+It is the difference between:
+
+```txt
+try random order and hope
+```
+
+and:
+
+```txt
+derive the only kind of order that can work
+```
+
+That is a very useful kind of boring.

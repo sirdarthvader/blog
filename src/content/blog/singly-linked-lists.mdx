@@ -1,0 +1,190 @@
+---
+title: "Singly Linked Lists"
+seoTitle: "Singly Linked Lists Explained: Head, Next, Insert, Append, and Delete"
+description: "Learn how singly linked lists work, including head pointers, next references, traversal, insertion, append, and deletion."
+publishedAt: 2026-01-26
+updatedAt: 2026-09-24
+tags: ["algorithms", "data-structures", "systems"]
+draft: false
+story:
+  id: "linked-lists"
+  role: "chapter"
+  order: 4
+  parent: "linked-lists-for-programmers"
+  dependsOn:
+    - "arrays-vs-linked-lists"
+---
+
+A singly linked list is the simplest linked list.
+
+Each node points in one direction:
+
+```txt
+head -> [A] -> [B] -> [C] -> null
+```
+
+Each node knows only the next node.
+
+It does not know the previous node.
+
+That one-way movement defines the structure.
+
+## The Node
+
+```ts
+type Node<T> = {
+  value: T;
+  next: Node<T> | null;
+};
+```
+
+And a minimal list can be represented by its head:
+
+```ts
+type LinkedList<T> = {
+  head: Node<T> | null;
+};
+```
+
+If `head` is `null`, the list is empty.
+
+If `head` points to a node, traversal starts there.
+
+## Traversal
+
+Traversal follows `next` until the end:
+
+```ts
+function values<T>(list: LinkedList<T>): T[] {
+  const result: T[] = [];
+  let current = list.head;
+
+  while (current !== null) {
+    result.push(current.value);
+    current = current.next;
+  }
+
+  return result;
+}
+```
+
+There is no index jump.
+
+There is only walking.
+
+## Insert At The Head
+
+Inserting at the head is the easiest operation:
+
+```txt
+head -> [B] -> [C]
+```
+
+Insert `A`:
+
+```txt
+head -> [A] -> [B] -> [C]
+```
+
+Code:
+
+```ts
+function prepend<T>(list: LinkedList<T>, value: T): void {
+  const node = {
+    value,
+    next: list.head,
+  };
+
+  list.head = node;
+}
+```
+
+The new node points at the old head.
+
+Then the list head points at the new node.
+
+That is it.
+
+## Append
+
+Appending means adding to the end:
+
+```txt
+head -> [A] -> [B] -> null
+```
+
+becomes:
+
+```txt
+head -> [A] -> [B] -> [C] -> null
+```
+
+Without a tail pointer, you must walk to the last node:
+
+```ts
+function append<T>(list: LinkedList<T>, value: T): void {
+  const node = { value, next: null };
+
+  if (list.head === null) {
+    list.head = node;
+    return;
+  }
+
+  let current = list.head;
+
+  while (current.next !== null) {
+    current = current.next;
+  }
+
+  current.next = node;
+}
+```
+
+Appending is `O(n)` here because you walk through the list.
+
+If the list also stores a `tail` reference, append can become `O(1)`.
+
+That is a design choice.
+
+## Delete After A Node
+
+If you have the previous node, deletion is local:
+
+```txt
+prev -> target -> next
+```
+
+becomes:
+
+```txt
+prev -> next
+```
+
+Code:
+
+```ts
+function deleteAfter<T>(node: Node<T>): void {
+  if (node.next === null) return;
+  node.next = node.next.next;
+}
+```
+
+The target node is no longer reachable from the list.
+
+In garbage-collected languages, it will eventually be cleaned up.
+
+In manual-memory languages, you would also need to free it safely.
+
+## The Main Limitation
+
+A singly linked list moves forward easily.
+
+It does not move backward.
+
+That makes some operations awkward.
+
+If you have a node and want to delete that node, you usually need the previous node.
+
+But the node itself does not know who points to it.
+
+That limitation is why doubly linked lists exist.

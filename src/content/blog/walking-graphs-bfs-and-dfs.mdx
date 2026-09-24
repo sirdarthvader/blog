@@ -1,0 +1,155 @@
+---
+title: "Walking Graphs with BFS and DFS"
+seoTitle: "BFS and DFS Explained: Graph Traversal for Programmers"
+description: "Learn graph traversal with BFS and DFS, when to use each search strategy, and why traversal order matters in programming."
+publishedAt: 2026-01-16
+updatedAt: 2026-09-24
+tags: ["algorithms", "data-structures", "systems"]
+draft: false
+story:
+  id: "graphs"
+  role: "chapter"
+  order: 5
+  parent: "understanding-graphs-for-programmers"
+  dependsOn:
+    - "representing-graphs-in-code"
+---
+
+Traversal is just systematic walking.
+
+You begin at one node, follow edges, and decide what to visit next.
+
+The two basic walks are breadth-first search and depth-first search.
+
+They are not magic.
+
+They are different answers to one question:
+
+```txt
+When I have several possible next nodes, which one should I visit first?
+```
+
+## BFS Walks In Rings
+
+Breadth-first search visits nearby things first.
+
+```txt
+distance 0:      A
+               /   \
+distance 1:   B     C
+             /       \
+distance 2: D         E
+```
+
+BFS says:
+
+```txt
+visit all nodes 1 step away
+then all nodes 2 steps away
+then all nodes 3 steps away
+```
+
+That makes BFS useful when distance in number of hops matters.
+
+Examples:
+
+```txt
+fewest clicks from one page to another
+closest friend-of-friend
+minimum number of moves in a simple puzzle
+all packages affected within N dependency hops
+```
+
+Here is a small BFS:
+
+```ts
+function bfs(graph: Map<string, string[]>, start: string): Map<string, number> {
+  const distance = new Map<string, number>();
+  const queue = [start];
+
+  distance.set(start, 0);
+
+  while (queue.length > 0) {
+    const node = queue.shift()!;
+
+    for (const neighbor of graph.get(node) ?? []) {
+      if (distance.has(neighbor)) continue;
+
+      distance.set(neighbor, distance.get(node)! + 1);
+      queue.push(neighbor);
+    }
+  }
+
+  return distance;
+}
+```
+
+The `distance` map is also the visited set.
+
+If a node already has a distance, we do not visit it again.
+
+Without that check, a graph with a cycle can make your traversal loop forever.
+
+## DFS Follows A Path
+
+Depth-first search chooses one path and keeps going until it cannot.
+
+```txt
+A
+|
+B
+|
+C
+
+then backtrack and try another branch
+```
+
+DFS is useful when the path itself matters.
+
+Examples:
+
+```txt
+detecting cycles
+walking a syntax tree
+searching possible game moves
+checking whether one state can reach another
+building a topological ordering
+```
+
+Here is a small recursive DFS:
+
+```ts
+function dfs(graph: Map<string, string[]>, start: string): string[] {
+  const visited = new Set<string>();
+  const order: string[] = [];
+
+  function visit(node: string) {
+    if (visited.has(node)) return;
+
+    visited.add(node);
+    order.push(node);
+
+    for (const neighbor of graph.get(node) ?? []) {
+      visit(neighbor);
+    }
+  }
+
+  visit(start);
+  return order;
+}
+```
+
+BFS and DFS often visit the same connected region.
+
+They just visit it in a different order.
+
+That order is not cosmetic. It decides what information you get naturally.
+
+```txt
+BFS naturally gives shortest hop distance.
+DFS naturally gives path structure and backtracking.
+```
+
+That is why the model comes first.
+
+Once you know the question, the walk starts to choose itself.

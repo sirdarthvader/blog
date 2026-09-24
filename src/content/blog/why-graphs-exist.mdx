@@ -1,0 +1,175 @@
+---
+title: "Why Graphs Exist"
+seoTitle: "Why Use Graphs in Programming? A Beginner's Guide"
+description: "Learn why graphs are useful in programming, when arrays and maps are not enough, and how graphs model relationships in real data."
+publishedAt: 2026-01-13
+updatedAt: 2026-09-24
+tags: ["algorithms", "data-structures", "systems"]
+draft: false
+story:
+  id: "graphs"
+  role: "chapter"
+  order: 1
+  parent: "understanding-graphs-for-programmers"
+---
+
+Most data structures make one question easy.
+
+An array makes position easy:
+
+```txt
+tasks[0]
+tasks[1]
+tasks[2]
+```
+
+A map makes lookup easy:
+
+```txt
+userById.get("42")
+```
+
+A table makes records easy:
+
+```txt
+name | email | created_at
+```
+
+A tree makes hierarchy easy:
+
+```txt
+root
+  child
+    grandchild
+```
+
+Graphs become useful when none of those shapes is the real point.
+
+Graphs become useful when the relationships are the data.
+
+## The Storage Trap
+
+Suppose you have packages in a monorepo:
+
+```txt
+shared-utils
+ui-kit
+checkout-app
+admin-app
+analytics
+```
+
+You can store that list in an array.
+
+That does not tell you much.
+
+The useful questions are different:
+
+```txt
+If shared-utils changes, which apps are affected?
+Can checkout-app build before ui-kit?
+Is there a circular dependency?
+Which package sits in the middle of everything?
+```
+
+Those are not storage questions.
+
+They are relationship questions.
+
+You can force those questions into arrays or maps, but you usually end up rebuilding graph ideas by hand.
+
+For example:
+
+```ts
+const packages = ["shared-utils", "ui-kit", "checkout-app"];
+
+const imports = [
+  ["ui-kit", "shared-utils"],
+  ["checkout-app", "ui-kit"],
+];
+```
+
+This is already a graph.
+
+The packages are nodes. The import pairs are edges.
+
+It just has not admitted what it is yet.
+
+## Data Becomes Graph-Shaped
+
+A problem becomes graph-shaped when each item can connect to many other items, and those connections matter.
+
+In a package graph:
+
+```txt
+node = package
+edge = imports or depends on
+question = what is affected, and in what order can we build?
+```
+
+In a social network:
+
+```txt
+node = person
+edge = follows, knows, blocked, messaged
+question = who is connected to whom?
+```
+
+In maps:
+
+```txt
+node = place
+edge = road, train line, flight path
+question = what route is cheapest, fastest, or possible?
+```
+
+In a compiler:
+
+```txt
+node = module, symbol, AST node, parser state
+edge = imports, references, contains, transitions to
+question = what depends on this meaning?
+```
+
+In a chess engine:
+
+```txt
+node = board position
+edge = legal move
+question = which future positions are worth searching?
+```
+
+Same vocabulary. Different domains.
+
+That is why graphs matter. They give us a general model for relationship-heavy data.
+
+## The Real Reason We Need Graphs
+
+We do not need graphs because interviews ask about them.
+
+We need graphs because many useful questions are transitive.
+
+Transitive means the answer travels through relationships:
+
+```txt
+shared-utils changed
+        |
+        v
+ui-kit depends on shared-utils
+        |
+        v
+checkout-app depends on ui-kit
+        |
+        v
+checkout-app is affected too
+```
+
+A direct lookup can tell you who depends on `shared-utils`.
+
+A graph traversal can tell you who depends on something that depends on something that depends on `shared-utils`.
+
+That is the leap.
+
+Graphs let you reason beyond the first relationship.
+
+They let you follow consequences.

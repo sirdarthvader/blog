@@ -5,6 +5,7 @@ import SiteMark from '../components/SiteMark.astro';
 
 interface Props {
   title: string;
+  seoTitle?: string;
   description?: string;
   ogImage?: string;
   article?: boolean;
@@ -13,10 +14,12 @@ interface Props {
   tags?: string[];
   noindex?: boolean;
   wide?: boolean;
+  structuredData?: Record<string, unknown> | Record<string, unknown>[];
 }
 
 const {
   title,
+  seoTitle,
   description = 'Developer, writer, builder.',
   ogImage,
   article = false,
@@ -25,19 +28,26 @@ const {
   tags = [],
   noindex = false,
   wide = false,
+  structuredData: extraStructuredData,
 } = Astro.props;
 
 const siteUrl = Astro.site ?? 'https://promax.dev';
 const canonicalURL = new URL(Astro.url.pathname, siteUrl);
 const ogImageURL = ogImage ? new URL(ogImage, siteUrl) : new URL('/og-default.png', siteUrl);
 
-const fullTitle = title === 'Home' ? 'Ashish Nandan Singh' : `${title} — Ashish Nandan Singh`;
+const pageTitle = seoTitle ?? title;
+const fullTitle = pageTitle === 'Home' ? 'Ashish Nandan Singh' : `${pageTitle} — Ashish Nandan Singh`;
 const isHome = Astro.url.pathname === '/';
 const personId = new URL('/#person', siteUrl).href;
 const websiteId = new URL('/#website', siteUrl).href;
 const webPageId = `${canonicalURL.href}#webpage`;
+const extraStructuredDataItems = Array.isArray(extraStructuredData)
+  ? extraStructuredData
+  : extraStructuredData
+    ? [extraStructuredData]
+    : [];
 
-const structuredData = {
+const baseStructuredData = {
   '@context': 'https://schema.org',
   '@graph': [
     {
@@ -70,7 +80,7 @@ const structuredData = {
       about: { '@id': personId },
       inLanguage: 'en',
     },
-    ...(article && publishedAt
+    ...(article && publishedAt && extraStructuredDataItems.length === 0
       ? [
           {
             '@type': 'BlogPosting',
@@ -89,6 +99,7 @@ const structuredData = {
       : []),
   ],
 };
+const structuredDataItems = [baseStructuredData, ...extraStructuredDataItems];
 ---
 
 <!doctype html>
@@ -130,7 +141,9 @@ const structuredData = {
     <link rel="alternate" type="application/rss+xml" title="Ashish Nandan Singh — Blog" href="/rss.xml" />
 
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
-    <script type="application/ld+json" set:html={JSON.stringify(structuredData)} />
+    {structuredDataItems.map((item) => (
+      <script type="application/ld+json" set:html={JSON.stringify(item)} />
+    ))}
     <Analytics />
   </head>
   <body>

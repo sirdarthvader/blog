@@ -1,461 +1,115 @@
 ---
 title: "Understanding Graphs for Programmers"
-description: "Graphs are not just interview material. They are the shape hiding inside build systems, dependency trees, routing, parsers, and chess engines."
+seoTitle: "Graphs for Programmers: Learn Graphs from First Principles"
+description: "Learn graphs for programming from first principles: graph models, nodes, edges, graph theory basics, traversal, dependency ordering, shortest paths, and search spaces."
 publishedAt: 2026-01-12
-updatedAt: 2026-09-21
+updatedAt: 2026-09-24
 tags: ["algorithms", "data-structures", "systems"]
 draft: false
+story:
+  id: "graphs"
+  title: "Graphs for Programmers"
+  role: "hub"
+  order: 0
 ---
 
 import Mermaid from '../../components/Mermaid.astro';
 
-I thought I understood graphs because I had done the usual rituals.
+Most explanations of graphs start too late.
 
-I could implement BFS. I could explain DFS. I knew that an adjacency list was not a guest list, although both can become awkward if you invite the wrong people.
+They open with BFS, DFS, shortest paths, topological sort, and suddenly you are expected to care about a queue walking through letters named `A`, `B`, and `C`.
 
-Then I tried building a monorepo dependency analyzer and immediately became less impressive.
+That is backwards.
 
-The question sounded simple:
+Before graphs are an algorithm topic, they are a modeling topic.
 
-> If this package changes, what else is affected?
+A graph is what you reach for when the important part of the data is not just the items, but the relationships between the items.
 
-That is when graphs stopped being interview furniture and became a real tool.
+This series is my attempt to make that idea feel obvious.
 
-Packages were nodes. Imports were edges. "What breaks?" was reachability. "What order should this build in?" was topological sort. "Why is this impossible?" was a cycle.
+## The Story
 
-Once I saw that shape, I started seeing graphs everywhere: ASTs, state machines, routing, module graphs, chess positions, workflow engines. The trick is not memorizing graph algorithms. The trick is recognizing when a problem is secretly saying, "please model me as nodes and edges before you make this weird."
+The strange thing about graphs is that they are both the topic and the shape of the topic.
 
-## Start With The Model
+Graphs are made of connected things. A good learning path is also made of connected things.
 
-A graph is a set of nodes and edges.
-
-That definition is accurate and almost aggressively unhelpful.
-
-The real question is:
+So instead of treating this as one giant article, I am splitting it into smaller pieces that link to each other:
 
 ```txt
-What is a node?
-What is an edge?
-What constraints exist?
-What question am I asking?
+Graphs for Programmers
+  -> Why graphs exist
+  -> The math root
+  -> Graphs compared to other structures
+  -> Representing graphs in code
+  -> Walking graphs
+  -> Cycle detection
+  -> Dependency order
+  -> Weighted paths
+  -> Search spaces
 ```
 
-The same graph vocabulary can model very different systems:
+The goal is not to memorize graph algorithms like spell names.
+
+The goal is to learn how to look at a messy system and ask:
 
 ```txt
-Monorepo:
-
-  node = package
-  edge = imports
-  constraint = should be acyclic
-  question = what is affected?
-
-Chess:
-
-  node = board position
-  edge = legal move
-  constraint = cycles possible
-  question = what move leads to the best future?
-
-Parser:
-
-  node = parser state
-  edge = token transition
-  constraint = deterministic
-  question = what state comes next?
+What are the things?
+How are the things connected?
+What can I learn by walking those connections?
 ```
 
-Same shape. Different meaning.
+## The First Picture
 
-This is where people go wrong with algorithms. They ask, "Should I use BFS or DFS?" too early. First decide what the graph means. The algorithm is downstream of the model.
-
-When I started the monorepo analyzer, I first built a lookup table: package to direct dependents. That worked for exactly one question and then gave up like it had a union-mandated break.
-
-The real question was transitive:
-
-```txt
-shared-utils changed
-        |
-        v
-ui-kit depends on shared-utils
-        |
-        v
-customer-app depends on ui-kit
-        |
-        v
-customer-app is affected too
-```
-
-That is not a lookup table problem. That is graph traversal.
+Here is the shape we keep coming back to:
 
 <Mermaid
-  title="A package graph makes transitive impact visible."
+  title="A graph is a model of things and relationships."
   chart={`
 graph LR
-  Shared[shared-utils] --> UIKit[ui-kit]
-  UIKit --> App[customer-app]
-  Shared --> Config[app-config]
-  Config --> Admin[admin-console]
-`}
-/>
+  A[Thing] --> B[Related thing]
+  A --> C[Another related thing]
+  C --> D[Something reachable later]
+`}/>
 
-## Store The Graph Boringly
+That picture could be a package dependency graph, a social network, a route map, a compiler model, a chess search tree, or a reading path.
 
-There are two common representations.
+The diagram does not know what the nodes mean.
 
-Adjacency matrix:
+You decide that.
 
-```txt
-      A B C
-    +------
-  A | 0 1 0
-  B | 0 0 1
-  C | 0 0 0
-```
-
-Adjacency list:
+That is the main design move in graph thinking:
 
 ```txt
-A -> [B]
-B -> [C]
-C -> []
+node = what kind of thing?
+edge = what kind of relationship?
+question = what do I need to know?
 ```
 
-Matrices give fast edge lookup but use `O(V^2)` space. They make sense when most nodes connect to most other nodes.
+The algorithm comes after that.
 
-Most software graphs are sparse. A package imports a few packages, not every package in the universe. A route points to a few children. A state points to a few valid next states.
+## Where To Start
 
-So start with an adjacency list:
+If you are new to graphs, read this story in order.
 
-```ts
-type Graph = Map<string, string[]>;
-```
+Start with the reason graphs exist at all. Then learn the small amount of math vocabulary. Then compare graphs with arrays, maps, tables, and trees. Only after that should traversal start to feel useful.
 
-It is not fancy. That is part of the charm. Many good systems begin as a `Map` with a better attitude.
+That order matters because BFS and DFS are not the foundation.
 
-## BFS: When Distance Matters
+They are ways of walking a model after the model already makes sense.
 
-Breadth-first search explores in rings.
+## The Learning Contract
 
-It visits everything one step away, then everything two steps away, then everything three steps away.
+Each article in this story should answer one question clearly.
+
+If an article cannot do that, it should probably be split again.
+
+That gives us a useful rule for writing technical essays:
 
 ```txt
-Depth 0:       A
-              |
-Depth 1:    B   C
-            |   |
-Depth 2:    D   E
+one article = one conceptual move
+one story = a connected path through many conceptual moves
 ```
 
-That makes BFS perfect when you care about shortest hop distance.
+Graphs happen to be the perfect first topic for this structure.
 
-In the dependency analyzer, I use BFS on the reversed graph. If imports point from app to library, the reversed graph points from library to consumers.
-
-```txt
-Normal graph:
-
-  app -> ui-kit -> shared-utils
-
-Reversed graph:
-
-  shared-utils -> ui-kit -> app
-```
-
-If `shared-utils` changes, BFS on the reversed graph tells me who depends on it, directly or indirectly.
-
-```ts
-function bfs(graph: Map<string, string[]>, start: string): Map<string, number> {
-  const distance = new Map<string, number>();
-  const queue = [start];
-
-  distance.set(start, 0);
-
-  while (queue.length > 0) {
-    const node = queue.shift()!;
-
-    for (const neighbor of graph.get(node) ?? []) {
-      if (distance.has(neighbor)) continue;
-
-      distance.set(neighbor, distance.get(node)! + 1);
-      queue.push(neighbor);
-    }
-  }
-
-  return distance;
-}
-```
-
-The returned distance is useful. A package at distance 1 is directly affected. A package at distance 4 is still affected, but the blast radius is less immediate.
-
-That is the kind of detail you want in tooling. "Everything is broken" is technically information, but so is a fire alarm in a kitchen where someone burned toast.
-
-## DFS: When The Path Matters
-
-Depth-first search goes down one path until it cannot, then backtracks.
-
-```txt
-A
-|
-B
-|
-C
-
-then backtrack and try the next branch
-```
-
-DFS is the tool I reach for when the current path matters:
-
-- cycle detection
-- topological sort
-- tree walking
-- game search
-- "is this state reachable from here?"
-
-For directed cycle detection, a plain visited set is not enough. You need three states:
-
-```ts
-type NodeState = "unvisited" | "in-progress" | "done";
-```
-
-The distinction matters:
-
-- `unvisited`: never explored
-- `in-progress`: currently on the recursion stack
-- `done`: fully explored and safe
-
-```ts
-function hasCycle(graph: Map<string, string[]>): boolean {
-  const state = new Map<string, NodeState>();
-  for (const node of graph.keys()) state.set(node, "unvisited");
-
-  function visit(node: string): boolean {
-    state.set(node, "in-progress");
-
-    for (const neighbor of graph.get(node) ?? []) {
-      if (state.get(neighbor) === "in-progress") return true;
-      if (state.get(neighbor) === "unvisited" && visit(neighbor)) return true;
-    }
-
-    state.set(node, "done");
-    return false;
-  }
-
-  for (const node of graph.keys()) {
-    if (state.get(node) === "unvisited" && visit(node)) return true;
-  }
-
-  return false;
-}
-```
-
-Why three states?
-
-Because seeing a `done` node again is fine. It means another path reaches something already explored.
-
-Seeing an `in-progress` node again is different. That means the path looped back into itself.
-
-```txt
-Not a cycle:
-
-  A -> B -> C
-  A ------> C
-
-Cycle:
-
-  A -> B
-  ^    |
-  |____|
-```
-
-That tiny distinction is the difference between "shared dependency" and "circular dependency." One is normal. The other is the build system quietly placing its head on the desk.
-
-## Topological Sort: The Build Order Problem
-
-Topological sort answers one of the most practical questions in software:
-
-> In what order can I do these things so every dependency comes first?
-
-Build systems ask this. Migration systems ask this. Package managers ask this. Humans ask this when assembling furniture, usually too late.
-
-Kahn's algorithm is my favorite way to explain it:
-
-1. Count incoming edges for each node.
-2. Start with nodes that have no incoming edges.
-3. Remove one.
-4. Decrease the incoming count of its neighbors.
-5. When a neighbor reaches zero, it is ready.
-
-```txt
-ui-kit -> app
-types  -> app
-utils  -> ui-kit
-
-Build order:
-
-  types, utils, ui-kit, app
-```
-
-Code:
-
-```ts
-function topologicalSort(graph: Map<string, string[]>): string[] | null {
-  const inDegree = new Map<string, number>();
-
-  for (const node of graph.keys()) inDegree.set(node, 0);
-
-  for (const neighbors of graph.values()) {
-    for (const neighbor of neighbors) {
-      inDegree.set(neighbor, (inDegree.get(neighbor) ?? 0) + 1);
-    }
-  }
-
-  const queue: string[] = [];
-  for (const [node, degree] of inDegree) {
-    if (degree === 0) queue.push(node);
-  }
-
-  const order: string[] = [];
-
-  while (queue.length > 0) {
-    const node = queue.shift()!;
-    order.push(node);
-
-    for (const neighbor of graph.get(node) ?? []) {
-      inDegree.set(neighbor, inDegree.get(neighbor)! - 1);
-      if (inDegree.get(neighbor) === 0) queue.push(neighbor);
-    }
-  }
-
-  return order.length === graph.size ? order : null;
-}
-```
-
-If the order does not contain every node, something was trapped in a cycle. The algorithm could not find a dependency-free starting point for those nodes because they all depend on each other.
-
-Which is also how some meetings feel, but I will be professional and move on.
-
-## Dijkstra: When Edges Have Cost
-
-BFS works when every edge costs the same.
-
-But software loves unequal costs:
-
-- network latency
-- route distance
-- retry cost
-- migration risk
-- bundle size
-- probability of failure
-
-Once edges have weights, shortest path means cheapest total cost, not fewest hops.
-
-Dijkstra's algorithm is built on edge relaxation:
-
-```txt
-If going through this node gives a cheaper path,
-update the known best distance.
-```
-
-```ts
-type WeightedGraph = Map<string, Array<[string, number]>>;
-
-function dijkstra(graph: WeightedGraph, start: string): Map<string, number> {
-  const distance = new Map<string, number>();
-  for (const node of graph.keys()) distance.set(node, Infinity);
-  distance.set(start, 0);
-
-  const queue: Array<[number, string]> = [[0, start]];
-
-  while (queue.length > 0) {
-    queue.sort((a, b) => a[0] - b[0]);
-    const [cost, node] = queue.shift()!;
-
-    if (cost > distance.get(node)!) continue;
-
-    for (const [neighbor, weight] of graph.get(node) ?? []) {
-      const candidate = cost + weight;
-
-      if (candidate < distance.get(neighbor)!) {
-        distance.set(neighbor, candidate);
-        queue.push([candidate, neighbor]);
-      }
-    }
-  }
-
-  return distance;
-}
-```
-
-This toy version sorts an array as a priority queue. A real implementation would use a heap. The idea is the same: always expand the cheapest known path next.
-
-Important footnote: Dijkstra assumes non-negative weights. If an edge can be negative, the guarantee breaks. Algorithms, like people, have boundaries.
-
-## Chess: A Graph Too Big To Visit
-
-A chess engine is also a graph problem.
-
-```txt
-node = position
-edge = legal move
-```
-
-The graph is enormous. You cannot traverse it fully unless your plan is to finish shortly after the heat death of the universe.
-
-So engines search part of it.
-
-Minimax is depth-first search with alternating goals:
-
-- on your turn, maximize the score
-- on the opponent's turn, assume they minimize your score
-
-Alpha-beta pruning makes this practical by skipping branches that cannot affect the answer.
-
-```txt
-          position
-         /   |    \
-      move  move  move
-       |     |     |
-    score  worse  impossible to matter
-```
-
-The key insight is not "visit the graph."
-
-The key insight is "prove which parts of the graph are not worth visiting."
-
-That idea shows up outside chess too. Query planners, build tools, dependency analyzers, compilers, and bundlers all win by avoiding unnecessary work.
-
-## The Questions I Ask Now
-
-When a problem smells graph-shaped, I ask:
-
-```txt
-1. What are the nodes?
-2. What are the edges?
-3. Are edges directed?
-4. Can cycles exist?
-5. Are edges weighted?
-6. Do I need reachability, order, shortest path, or search?
-```
-
-Those questions usually tell me which tool belongs:
-
-```txt
-Reachability       -> BFS or DFS
-Shortest hops      -> BFS
-Cycle detection    -> DFS with three states
-Dependency order   -> topological sort
-Weighted shortest  -> Dijkstra
-Game search        -> DFS + pruning
-```
-
-That is the actual value of learning graphs.
-
-Not passing an interview.
-
-Not reciting algorithm names like spells from a dusty book.
-
-The value is being able to look at a messy software problem and notice the shape underneath.
-
-Once you can see the nodes and edges, the problem usually becomes less mysterious.
-
-Still annoying sometimes. But less mysterious.
+We are going to explain graphs by building a graph of explanations.

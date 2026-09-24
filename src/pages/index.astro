@@ -2,8 +2,14 @@
 import BaseLayout from '../layouts/BaseLayout.astro';
 import MithilaMemory from '../components/MithilaMemory.astro';
 import { getCollection } from 'astro:content';
+import { getAllStories } from '../lib/contentGraph';
 const isLocalhost = import.meta.env.DEV || import.meta.env.MODE === 'localhost';
-const posts = (await getCollection('blog', ({ data }) => isLocalhost ? data : !data.draft))
+const allPosts = await getCollection('blog', ({ data }) => isLocalhost ? data : !data.draft);
+const stories = getAllStories(allPosts)
+  .sort((a, b) => (b.updatedAt?.valueOf() ?? 0) - (a.updatedAt?.valueOf() ?? 0))
+  .slice(0, 3);
+const posts = allPosts
+  .filter((post) => !post.data.story)
   .sort((a, b) => b.data.publishedAt.valueOf() - a.data.publishedAt.valueOf())
   .slice(0, 8);
 
@@ -32,7 +38,7 @@ const mediumArticles = [
 
 <BaseLayout
   title="Home"
-  description="Ashish Nandan Singh builds frontend platforms, internal frameworks, and tiny learning projects to understand how software really works."
+  description="Ashish Nandan Singh is an engineer and writer keeping a public diary of ideas learned from first principles across programming, mathematics, physics, and systems."
   wide
 >
   <div class="home-grid">
@@ -41,32 +47,40 @@ const mediumArticles = [
 
       <section class="section bio" aria-label="Biography">
         <p>
-          I am an engineer, reader, and writer with a lifelong inability to
-          leave interesting machinery alone. At
+          I am a professional key presser: I write programs for a living, and
+          I learn and teach to actually live. This is my diary on the internet
+          for things I am trying to understand properly.
+        </p>
+
+        <p>
+          I like learning from <mark>first principles</mark>: start with the
+          basic problem, build the idea slowly, and only then accept the
+          abstraction.
+        </p>
+
+        <p>
+          Most of the writing starts with programming, but the curiosity is
+          wider than that: <mark>mathematics</mark>, <mark>physics</mark>,
+          systems, tools, and anything else that feels worth taking apart
+          carefully.
+        </p>
+
+        <p>
+          At
           <a href="https://www.cvent.com" target="_blank" rel="noopener noreferrer">Cvent</a>,
-          I work on <mark>frontend platforms</mark>: internal development
-          frameworks, developer foundations, and the runtime architecture behind
-          independently built <mark>Next.js</mark> applications.
-        </p>
-
-        <p>
-          Lately I have been deep in the mildly cursed, very interesting world
-          of <mark>microfrontends</mark>: RSC payloads, runtime composition, Shadow DOM
-          isolation, shared modules, protected proxying, and all the sharp edges
-          that appear when framework theory meets product reality.
-        </p>
-
-        <p>
-          I write to explain the parts of programming that only become clear
-          once you build them yourself. In the long list of things I have poked
-          at because curiosity won, <mark>Fluffy</mark>, a tiny React framework,
-          is simply the current one. The <mark>Neovim</mark> problem, however,
-          appears to be permanent.
+          I work on an <mark>internal framework</mark> for building web apps
+          with <mark>Next.js</mark>, <mark>Nx</mark> build tooling, and
+          <mark>AWS CDK</mark> for cloud and infrastructure.
         </p>
       </section>
 
       <section class="section" aria-labelledby="notes-heading">
-        <h2 id="notes-heading">Notes</h2>
+        <div class="section-heading-row">
+          <h2 id="notes-heading">Notes</h2>
+          <a href="/notes" onclick={`window.trackSiteEvent?.('homepage_note_click', { note: 'homepage_note_click' })`}>
+            All notes
+          </a>
+        </div>
         <ul class="link-list notes-list">
           {notes.map((note) => (
             <li>
@@ -75,16 +89,33 @@ const mediumArticles = [
               </a>
             </li>
             ))}
-            <li>
-              <a href={`/notes`} onclick={`window.trackSiteEvent?.('homepage_note_click', { note: 'homepage_note_click' })`}>
-                All Notes...
-              </a>
-            </li>
         </ul>
       </section>
 
+      {stories.length > 0 && (
+      <section class="section" aria-labelledby="stories-heading">
+        <div class="section-heading-row">
+          <h2 id="stories-heading">Stories</h2>
+          <a href="/stories">All stories</a>
+        </div>
+        <div class="blog-list">
+          {stories.map((story) => (
+            <a class="blog-link" href={story.href}>
+              <span>{story.title}</span>
+              <time>{story.chapterCount} {story.chapterCount === 1 ? 'chapter' : 'chapters'}</time>
+            </a>
+          ))}
+        </div>
+      </section>
+      )}
+
       <section class="section" aria-labelledby="blogs-heading">
-        <h2 id="blogs-heading">Blogs</h2>
+        <div class="section-heading-row">
+          <h2 id="blogs-heading">Blogs</h2>
+          <a href="/blog" onclick={`window.trackSiteEvent?.('homepage_blog_click', { post: 'homepage_blog_click' })`}>
+            All blogs
+          </a>
+        </div>
         <div class="blog-list">
           {posts.map((post) => (
             <a
@@ -101,9 +132,6 @@ const mediumArticles = [
               </time>
             </a>
             ))}
-            <a href={`/blog`} onclick={`window.trackSiteEvent?.('homepage_blog_click', { post: 'homepage_blog_click' })`}>
-              All Blogs...
-            </a>
         </div>
       </section>
 
