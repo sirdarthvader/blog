@@ -1,8 +1,10 @@
 ---
 import BaseLayout from '../../layouts/BaseLayout.astro';
 import PostCard from '../../components/PostCard.astro';
+import StoryCard from '../../components/StoryCard.astro';
 import HomeBackLink from '../../components/HomeBackLink.astro';
 import { getCollection } from 'astro:content';
+import { getAllStories } from '../../lib/contentGraph';
 
 const showDrafts = import.meta.env.DEV || import.meta.env.MODE === 'localhost';
 const allPosts = (await getCollection('blog', ({ data }) => showDrafts || !data.draft))
@@ -11,9 +13,11 @@ const allPosts = (await getCollection('blog', ({ data }) => showDrafts || !data.
 const allTags = [...new Set(allPosts.flatMap((p) => p.data.tags))].sort();
 
 const selectedTag = Astro.url.searchParams.get('tag');
+const stories = getAllStories(allPosts)
+  .sort((a, b) => (b.updatedAt?.valueOf() ?? 0) - (a.updatedAt?.valueOf() ?? 0));
 const posts = selectedTag
   ? allPosts.filter((p) => p.data.tags.includes(selectedTag))
-  : allPosts;
+  : allPosts.filter((p) => !p.data.story);
 ---
 
 <BaseLayout title="Writing" description="Articles on development, research, and ideas.">
@@ -21,7 +25,7 @@ const posts = selectedTag
   <header style="margin-bottom: 2.5rem;">
     <h1 style="font-size: 1.25rem; font-weight: 500; margin-bottom: 0.5rem; color: var(--text-heading);">Writing</h1>
     <p style="color: var(--text-nav); font-size: 0.9375rem;">
-      {allPosts.length} {allPosts.length === 1 ? 'article' : 'articles'} on development, research, and ideas.
+      {allPosts.length} {allPosts.length === 1 ? 'article' : 'articles'} and {stories.length} {stories.length === 1 ? 'story' : 'stories'} on development, research, and ideas.
     </p>
   </header>
 
@@ -44,16 +48,40 @@ const posts = selectedTag
     </div>
   )}
 
+  {!selectedTag && stories.length > 0 && (
+    <section class="blog-section" aria-labelledby="stories-heading">
+      <div class="section-heading-row">
+        <h2 id="stories-heading">Stories</h2>
+        <a href="/stories">All Stories</a>
+      </div>
+      <div class="blog-list">
+        {stories.map((story) => (
+          <div class="blog-list__item">
+            <StoryCard story={story} />
+          </div>
+        ))}
+      </div>
+    </section>
+  )}
+
+  <section class="blog-section" aria-labelledby="articles-heading">
+    <h2 id="articles-heading">{selectedTag ? `Articles tagged #${selectedTag}` : 'Articles'}</h2>
   {posts.length > 0 ? (
-    <div style="display: flex; flex-direction: column; gap: 0;">
+    <div class="blog-list">
       {posts.map((post) => (
-        <div style="padding: 1.25rem 0; border-bottom: 1px solid var(--border);">
+        <div class="blog-list__item">
           <PostCard
             title={post.data.title}
             description={post.data.description}
             publishedAt={post.data.publishedAt}
             slug={post.id}
             tags={post.data.tags}
+            story={post.data.story ? {
+              id: post.data.story.id,
+              title: stories.find((story) => story.id === post.data.story?.id)?.title ?? post.data.story.id,
+              role: post.data.story.role,
+              order: post.data.story.order,
+            } : undefined}
           />
         </div>
       ))}
@@ -61,4 +89,45 @@ const posts = selectedTag
   ) : (
     <p style="color: var(--text-nav);">No posts found{selectedTag ? ` for #${selectedTag}` : ''}.</p>
   )}
+  </section>
 </BaseLayout>
+
+<style>
+  .blog-section {
+    margin-top: 2rem;
+  }
+
+  .blog-section h2 {
+    color: var(--text-heading);
+    font-size: 1rem;
+    font-weight: 500;
+    margin-bottom: 0.75rem;
+  }
+
+  .section-heading-row {
+    align-items: baseline;
+    display: flex;
+    gap: 1rem;
+    justify-content: space-between;
+    margin-bottom: 0.75rem;
+  }
+
+  .section-heading-row h2 {
+    margin-bottom: 0;
+  }
+
+  .section-heading-row a {
+    color: var(--text-nav);
+    font-size: 0.875rem;
+  }
+
+  .blog-list {
+    display: flex;
+    flex-direction: column;
+  }
+
+  .blog-list__item {
+    border-bottom: 1px solid var(--border);
+    padding: 1.25rem 0;
+  }
+</style>

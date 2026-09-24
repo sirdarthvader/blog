@@ -1,0 +1,154 @@
+---
+title: "Detecting Cycles in Graphs"
+seoTitle: "Detecting Cycles in Graphs: DFS and the Three-State Trick"
+description: "Learn how to detect cycles in directed graphs using DFS, in-progress nodes, and done states, with dependency graph examples."
+publishedAt: 2026-01-18
+updatedAt: 2026-09-24
+tags: ["algorithms", "data-structures", "systems"]
+draft: false
+story:
+  id: "graphs"
+  role: "chapter"
+  order: 6
+  parent: "understanding-graphs-for-programmers"
+  dependsOn:
+    - "walking-graphs-bfs-and-dfs"
+---
+
+A cycle is a path that comes back to where it started:
+
+```txt
+A -> B -> C -> A
+```
+
+That shape is not automatically bad.
+
+In a map, a cycle is ordinary. You can drive around a block.
+
+In a social network, a cycle is ordinary. People can know each other in loops.
+
+In a package dependency graph, a cycle can break the build:
+
+```txt
+ui-kit -> shared-utils -> ui-kit
+```
+
+Now neither package has a clean place to start.
+
+The graph shape is the same. The meaning is different.
+
+That is why cycle detection is not just an algorithm trick. It is a model check.
+
+## Why A Visited Set Is Not Enough
+
+For directed cycle detection, a plain visited set is too blunt.
+
+Imagine this graph:
+
+```txt
+A -> B -> C
+A ------> C
+```
+
+`C` is reached twice.
+
+That is not a cycle.
+
+It just means two paths share a dependency.
+
+Now compare:
+
+```txt
+A -> B
+^    |
+|____|
+```
+
+Here the path loops back into itself.
+
+That is a cycle.
+
+To tell the difference, DFS needs three states:
+
+```ts
+type NodeState = "unvisited" | "in-progress" | "done";
+```
+
+The states mean:
+
+```txt
+unvisited   = never explored
+in-progress = currently on the active path
+done        = fully explored
+```
+
+Seeing a `done` node again is fine.
+
+Seeing an `in-progress` node again means the current path has looped back into itself.
+
+## The Code
+
+```ts
+type NodeState = "unvisited" | "in-progress" | "done";
+
+function hasCycle(graph: Map<string, string[]>): boolean {
+  const state = new Map<string, NodeState>();
+
+  for (const node of graph.keys()) {
+    state.set(node, "unvisited");
+  }
+
+  function visit(node: string): boolean {
+    state.set(node, "in-progress");
+
+    for (const neighbor of graph.get(node) ?? []) {
+      if (state.get(neighbor) === "in-progress") return true;
+
+      if (state.get(neighbor) === "unvisited" && visit(neighbor)) {
+        return true;
+      }
+    }
+
+    state.set(node, "done");
+    return false;
+  }
+
+  for (const node of graph.keys()) {
+    if (state.get(node) === "unvisited" && visit(node)) {
+      return true;
+    }
+  }
+
+  return false;
+}
+```
+
+The important idea is not the code shape.
+
+The important idea is the active path.
+
+A directed cycle exists when a path reaches something already on that same path.
+
+## What To Do With A Cycle
+
+Detection is only the first step.
+
+Once you find a cycle, ask what it means:
+
+```txt
+In a map:
+  probably fine
+
+In a workflow:
+  maybe intentional retry behavior
+
+In a dependency graph:
+  probably a design smell
+
+In a game state graph:
+  expected, because positions can repeat
+```
+
+Algorithms can find structure.
+
+The model tells you whether that structure is healthy.

@@ -1,0 +1,96 @@
+---
+title: "Linked Lists for Programmers"
+seoTitle: "Linked Lists for Programmers: Learn Linked Lists from First Principles"
+description: "Learn linked lists from first principles: nodes, references, arrays vs linked lists, singly linked lists, doubly linked lists, and practical tradeoffs."
+publishedAt: 2026-01-22
+updatedAt: 2026-09-24
+tags: ["algorithms", "data-structures", "systems"]
+draft: false
+story:
+  id: "linked-lists"
+  title: "Linked Lists for Programmers"
+  role: "hub"
+  order: 0
+---
+
+Most explanations of linked lists start with code.
+
+They show a `Node`, a `next` pointer, and then suddenly you are reversing lists in place while pretending this is a normal way to spend an afternoon.
+
+That is too fast.
+
+A linked list is not primarily about interview tricks.
+
+It is a different way to think about a sequence.
+
+An array says:
+
+```txt
+items live next to each other
+position gives access
+```
+
+A linked list says:
+
+```txt
+each item knows where the next item is
+relationships give access
+```
+
+That difference sounds small, but it changes everything: how you move through the data, how you insert, how you delete, how memory behaves, and why linked lists are useful in some systems but a bad choice in a lot of ordinary application code.
+
+## The Story
+
+This series is a first-principles path through linked lists.
+
+```txt
+Linked Lists for Programmers
+  -> Why linked lists exist
+  -> Nodes and references
+  -> Arrays vs linked lists
+  -> Singly linked lists
+  -> Doubly linked lists
+  -> Common operations
+  -> Cost model and memory behavior
+  -> Where linked lists show up
+  -> When not to use them
+```
+
+The goal is not to memorize pointer puzzles.
+
+The goal is to understand the model well enough that the operations stop feeling mysterious.
+
+## The First Picture
+
+Here is the whole shape:
+
+```txt
+head
+ |
+ v
+[A] -> [B] -> [C] -> null
+```
+
+There is no magic container holding all the nodes together.
+
+There is a starting reference called `head`.
+
+Each node points to the next node.
+
+The list exists because those references form a chain.
+
+That is the mental shift.
+
+## Where To Start
+
+Start with why linked lists exist at all.
+
+Then learn what a node really is.
+
+Then compare linked lists with arrays, because most practical decisions come down to that tradeoff.
+
+After that, singly and doubly linked lists will feel like small variations on the same model.
+
+The operations come later.
+
+The model comes first.

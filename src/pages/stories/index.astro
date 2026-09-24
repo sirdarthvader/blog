@@ -1,0 +1,86 @@
+---
+import BaseLayout from '../../layouts/BaseLayout.astro';
+import HomeBackLink from '../../components/HomeBackLink.astro';
+import StoryCard from '../../components/StoryCard.astro';
+import { getCollection } from 'astro:content';
+import { getAllStories } from '../../lib/contentGraph';
+
+const showDrafts = import.meta.env.DEV || import.meta.env.MODE === 'localhost';
+const posts = await getCollection('blog', ({ data }) => showDrafts || !data.draft);
+const stories = getAllStories(posts)
+  .sort((a, b) => (b.updatedAt?.valueOf() ?? 0) - (a.updatedAt?.valueOf() ?? 0));
+const siteUrl = Astro.site ?? 'https://promax.dev';
+const pageUrl = new URL('/stories', siteUrl).toString();
+const structuredData = [
+  {
+    '@context': 'https://schema.org',
+    '@type': 'CollectionPage',
+    name: 'Stories',
+    description: 'Connected reading paths through larger programming topics.',
+    url: pageUrl,
+    mainEntity: {
+      '@type': 'ItemList',
+      itemListElement: stories.map((story, index) => ({
+        '@type': 'ListItem',
+        position: index + 1,
+        name: story.title,
+        url: new URL(story.href, siteUrl).toString(),
+      })),
+    },
+  },
+  {
+    '@context': 'https://schema.org',
+    '@type': 'BreadcrumbList',
+    itemListElement: [
+      {
+        '@type': 'ListItem',
+        position: 1,
+        name: 'Stories',
+        item: pageUrl,
+      },
+    ],
+  },
+];
+---
+
+<BaseLayout
+  title="Stories"
+  seoTitle="Programming Stories and Learning Paths"
+  description="Connected reading paths through larger programming topics."
+  structuredData={structuredData}
+>
+  <HomeBackLink />
+
+  <header style="margin-bottom: 2.5rem;">
+    <h1 style="font-size: 1.25rem; font-weight: 500; margin-bottom: 0.5rem; color: var(--text-heading);">
+      Stories
+    </h1>
+    <p style="color: var(--text-nav); font-size: 0.9375rem;">
+      Connected reading paths through larger programming topics.
+    </p>
+  </header>
+
+  {stories.length > 0 ? (
+    <div class="stories-list">
+      {stories.map((story) => (
+        <div class="stories-list__item">
+          <StoryCard story={story} />
+        </div>
+      ))}
+    </div>
+  ) : (
+    <p style="color: var(--text-nav);">No stories yet.</p>
+  )}
+</BaseLayout>
+
+<style>
+  .stories-list {
+    display: flex;
+    flex-direction: column;
+  }
+
+  .stories-list__item {
+    border-bottom: 1px solid var(--border);
+    padding: 1.25rem 0;
+  }
+</style>

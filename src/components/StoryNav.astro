@@ -1,0 +1,132 @@
+---
+import type { StoryNavigation } from '../lib/contentGraph';
+
+interface Props {
+  navigation: StoryNavigation;
+}
+
+const { navigation } = Astro.props;
+const { story, current, previous, next, parent } = navigation;
+const isHub = current.role === 'hub';
+---
+
+<aside class="story-nav" aria-label={`${story.title} story navigation`}>
+  <div class="story-nav__meta">
+    <a href={`/stories/${story.id}`} class="story-nav__story">{story.title}</a>
+    <span>{isHub ? 'Hub' : `Part ${current.order}`}</span>
+  </div>
+
+  <p class="story-nav__status">
+    {isHub
+      ? `This is the starting point for ${story.title}.`
+      : `You are reading part ${current.order} of ${story.title}.`}
+  </p>
+
+  {!isHub && parent && (
+    <a class="story-nav__parent" href={parent.href}>Start with: {parent.title}</a>
+  )}
+
+  {(previous || next) && (
+    <div class="story-nav__links">
+      {previous ? (
+        <a href={previous.href} class="story-nav__link">
+          <span>Previous</span>
+          {previous.title}
+        </a>
+      ) : (
+        <span class="story-nav__link story-nav__link--empty" aria-hidden="true"></span>
+      )}
+
+      {next ? (
+        <a href={next.href} class="story-nav__link story-nav__link--next">
+          <span>Next</span>
+          {next.title}
+        </a>
+      ) : (
+        <span class="story-nav__link story-nav__link--empty" aria-hidden="true"></span>
+      )}
+    </div>
+  )}
+</aside>
+
+<style>
+  .story-nav {
+    border-top: 1px solid var(--border);
+    border-bottom: 1px solid var(--border);
+    margin: 2rem 0;
+    padding: 1rem 0;
+  }
+
+  .story-nav__meta {
+    color: var(--text-nav);
+    display: flex;
+    font-family: ui-monospace, monospace;
+    font-size: 0.75rem;
+    gap: 0.5rem;
+    justify-content: space-between;
+    margin-bottom: 0.75rem;
+  }
+
+  .story-nav__story,
+  .story-nav__parent,
+  .story-nav__link {
+    text-decoration: none;
+  }
+
+  .story-nav__story {
+    color: var(--text-heading);
+  }
+
+  .story-nav__parent {
+    color: var(--text-nav);
+    display: inline-flex;
+    font-size: 0.875rem;
+    margin-bottom: 1rem;
+  }
+
+  .story-nav__status {
+    color: var(--text-copy);
+    font-size: 0.9375rem;
+    line-height: 1.6;
+    margin-bottom: 0.5rem;
+  }
+
+  .story-nav__links {
+    display: grid;
+    gap: 1rem;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  }
+
+  .story-nav__link {
+    color: var(--text-heading);
+    display: flex;
+    flex-direction: column;
+    font-size: 0.9375rem;
+    gap: 0.25rem;
+    line-height: 1.45;
+  }
+
+  .story-nav__link span {
+    color: var(--text-nav);
+    font-family: ui-monospace, monospace;
+    font-size: 0.75rem;
+  }
+
+  .story-nav__link--next {
+    text-align: right;
+  }
+
+  @media (max-width: 42rem) {
+    .story-nav__links {
+      grid-template-columns: 1fr;
+    }
+
+    .story-nav__link--next {
+      text-align: left;
+    }
+
+    .story-nav__link--empty {
+      display: none;
+    }
+  }
+</style>

@@ -1,0 +1,143 @@
+---
+title: "Linked List Nodes and References"
+seoTitle: "Linked List Nodes and References Explained"
+description: "Learn the mental model behind linked lists: nodes, values, next references, head pointers, null, and how a list exists as a chain."
+publishedAt: 2026-01-24
+updatedAt: 2026-09-24
+tags: ["algorithms", "data-structures", "systems"]
+draft: false
+story:
+  id: "linked-lists"
+  role: "chapter"
+  order: 2
+  parent: "linked-lists-for-programmers"
+  dependsOn:
+    - "why-linked-lists-exist"
+---
+
+A linked list is made of nodes.
+
+A node is a small object with a value and a reference to another node:
+
+```ts
+type Node<T> = {
+  value: T;
+  next: Node<T> | null;
+};
+```
+
+That is the whole building block.
+
+The rest of the data structure comes from connecting those blocks.
+
+## A Node Is Not The List
+
+This is one of the easiest places to get confused.
+
+A node is one item:
+
+```txt
+[A]
+```
+
+A linked list is a chain of nodes:
+
+```txt
+[A] -> [B] -> [C] -> null
+```
+
+The list exists because each node points to the next one.
+
+There is usually a separate reference called `head`:
+
+```txt
+head -> [A] -> [B] -> [C] -> null
+```
+
+`head` is not a value in the list.
+
+It is the way into the list.
+
+If you lose `head`, you lose the practical ability to reach the chain.
+
+## What `next` Means
+
+The `next` field means:
+
+```txt
+where do I go after this node?
+```
+
+For the last node, there is nowhere else to go:
+
+```txt
+[C] -> null
+```
+
+`null` marks the end.
+
+Traversal is just repeatedly following `next`:
+
+```ts
+let current = head;
+
+while (current !== null) {
+  console.log(current.value);
+  current = current.next;
+}
+```
+
+That code is the linked-list mental model in motion.
+
+## References, Not Copies
+
+When a node points to another node, it is not copying that node.
+
+It holds a reference.
+
+That means two variables can point at the same node:
+
+```ts
+const a = { value: "A", next: null };
+const alsoA = a;
+```
+
+Changing through one reference affects the same object:
+
+```ts
+alsoA.next = { value: "B", next: null };
+```
+
+Now `a.next` also points to `B`.
+
+This is why linked list operations require care.
+
+You are not moving boxes around on paper.
+
+You are rewiring references to shared objects.
+
+## The Smallest Useful List
+
+An empty list:
+
+```txt
+head -> null
+```
+
+A one-node list:
+
+```txt
+head -> [A] -> null
+```
+
+A three-node list:
+
+```txt
+head -> [A] -> [B] -> [C] -> null
+```
+
+Every linked-list operation is some version of preserving or changing that chain.
+
+That is the core.
+
+Once the node/reference model is clear, insertion and deletion stop feeling like magic.

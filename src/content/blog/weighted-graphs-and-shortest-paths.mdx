@@ -1,0 +1,179 @@
+---
+title: "Weighted Graphs and Shortest Paths"
+seoTitle: "Weighted Graphs and Shortest Paths: Dijkstra for Programmers"
+description: "Learn weighted graphs, shortest paths, edge costs, and Dijkstra's algorithm for programming problems where relationships have cost."
+publishedAt: 2026-01-20
+updatedAt: 2026-09-24
+tags: ["algorithms", "data-structures", "systems"]
+draft: false
+story:
+  id: "graphs"
+  role: "chapter"
+  order: 8
+  parent: "understanding-graphs-for-programmers"
+  dependsOn:
+    - "walking-graphs-bfs-and-dfs"
+---
+
+BFS gives the shortest path when every edge costs the same.
+
+If every move costs one step, fewer edges means shorter path.
+
+But real systems often have unequal costs:
+
+```txt
+road distance
+network latency
+money
+risk
+bundle size
+probability of failure
+```
+
+Once edges have different weights, shortest path means cheapest total cost, not fewest hops.
+
+## Fewest Hops Is Not Always Cheapest
+
+Imagine this graph:
+
+```txt
+A -> D      costs 10
+A -> B -> D costs 2 + 2 = 4
+```
+
+The direct path has fewer hops.
+
+The two-step path is cheaper.
+
+That is the moment BFS stops being enough.
+
+You need an algorithm that pays attention to edge weights.
+
+## Weighted Representation
+
+An unweighted adjacency list might look like this:
+
+```ts
+type Graph = Map<string, string[]>;
+```
+
+A weighted graph needs the neighbor and the cost:
+
+```ts
+type WeightedGraph = Map<string, Array<[string, number]>>;
+```
+
+Example:
+
+```ts
+const graph: WeightedGraph = new Map([
+  ["A", [["B", 2], ["D", 10]]],
+  ["B", [["D", 2]]],
+  ["D", []],
+]);
+```
+
+Now the edge is not just:
+
+```txt
+A connects to B
+```
+
+It is:
+
+```txt
+A connects to B with cost 2
+```
+
+## Dijkstra's Idea
+
+Dijkstra's algorithm handles shortest paths when all weights are non-negative.
+
+The main idea is relaxation:
+
+```txt
+If going through this node gives a cheaper known route,
+update the best known cost.
+```
+
+The algorithm always expands the cheapest known unfinished route next.
+
+That sentence is the heart of it.
+
+## A Small Version
+
+```ts
+type WeightedGraph = Map<string, Array<[string, number]>>;
+
+function dijkstra(graph: WeightedGraph, start: string): Map<string, number> {
+  const distance = new Map<string, number>();
+
+  for (const node of graph.keys()) {
+    distance.set(node, Infinity);
+  }
+
+  distance.set(start, 0);
+
+  const queue: Array<[number, string]> = [[0, start]];
+
+  while (queue.length > 0) {
+    queue.sort((a, b) => a[0] - b[0]);
+    const [cost, node] = queue.shift()!;
+
+    if (cost > distance.get(node)!) continue;
+
+    for (const [neighbor, weight] of graph.get(node) ?? []) {
+      const candidate = cost + weight;
+
+      if (candidate < distance.get(neighbor)!) {
+        distance.set(neighbor, candidate);
+        queue.push([candidate, neighbor]);
+      }
+    }
+  }
+
+  return distance;
+}
+```
+
+This version sorts an array as a simple priority queue.
+
+For large graphs, use a real heap.
+
+The idea stays the same:
+
+```txt
+expand the cheapest known path first
+```
+
+## The Boundary
+
+Dijkstra assumes non-negative weights.
+
+That is not a tiny footnote. It is part of the contract.
+
+If an edge can have negative cost, the guarantee breaks because a path that looked expensive earlier might become cheap later.
+
+Algorithms have boundaries.
+
+Knowing the boundary is part of knowing the algorithm.
+
+## What We Learned
+
+BFS is about distance in hops.
+
+Dijkstra is about distance in cost.
+
+That difference shows up all over software:
+
+```txt
+fewest network calls
+lowest latency route
+cheapest migration plan
+least risky dependency path
+smallest bundle impact
+```
+
+Once relationships have cost, your graph becomes weighted.
+
+And once your graph is weighted, "shortest" needs a more careful definition.

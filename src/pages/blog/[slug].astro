@@ -1,6 +1,7 @@
 ---
 import BlogLayout from '../../layouts/BlogLayout.astro';
 import { getCollection, render } from 'astro:content';
+import { getStoryNavigation } from '../../lib/contentGraph';
 
 export async function getStaticPaths() {
   const showDrafts = import.meta.env.DEV || import.meta.env.MODE === 'localhost';
@@ -13,14 +14,19 @@ export async function getStaticPaths() {
 
 const { post } = Astro.props;
 const { Content } = await render(post);
+const showDrafts = import.meta.env.DEV || import.meta.env.MODE === 'localhost';
+const allPosts = await getCollection('blog', ({ data }) => showDrafts || !data.draft);
+const storyNavigation = getStoryNavigation(allPosts, post);
 ---
 
 <BlogLayout
   title={post.data.title}
+  seoTitle={post.data.seoTitle}
   description={post.data.description}
   publishedAt={post.data.publishedAt}
   updatedAt={post.data.updatedAt}
   tags={post.data.tags}
+  storyNavigation={storyNavigation}
 >
   <Content />
 </BlogLayout>

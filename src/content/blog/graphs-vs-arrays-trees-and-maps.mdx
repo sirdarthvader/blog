@@ -1,0 +1,177 @@
+---
+title: "Graphs vs Arrays, Maps, Tables, and Trees"
+seoTitle: "Graphs vs Arrays, Maps, Tables, and Trees in Programming"
+description: "Compare graphs with arrays, maps, tables, and trees, and learn when graph data structures are the right model for relationship-heavy problems."
+publishedAt: 2026-01-15
+updatedAt: 2026-09-24
+tags: ["algorithms", "data-structures", "systems"]
+draft: false
+story:
+  id: "graphs"
+  role: "chapter"
+  order: 3
+  parent: "understanding-graphs-for-programmers"
+  dependsOn:
+    - "graph-math-from-first-principles"
+---
+
+A graph is not better than an array, map, table, or tree.
+
+It answers a different kind of question.
+
+That distinction matters because beginners often meet graphs as "the hard data structure" after learning the simpler ones.
+
+That is the wrong framing.
+
+Graphs are not the advanced version of arrays.
+
+Graphs are what you use when the shape of the problem is relationships.
+
+## Array
+
+An array says position matters.
+
+```txt
+items[0]
+items[1]
+items[2]
+```
+
+Use arrays for:
+
+```txt
+lists
+sequences
+queues
+sorted data
+ordered results
+```
+
+If your main question is "what comes next by position?", an array is probably enough.
+
+## Map
+
+A map says lookup matters.
+
+```ts
+const user = usersById.get("42");
+```
+
+Use maps for:
+
+```txt
+indexes
+caches
+direct access
+deduplication
+grouping
+```
+
+If your main question is "give me the thing with this key", a map is probably enough.
+
+## Table
+
+A table says records matter.
+
+```txt
+id | title | status | created_at
+```
+
+Use tables for:
+
+```txt
+records
+filtering
+aggregation
+reporting
+joins
+```
+
+Tables can store relationships too, but the raw table is not the mental model.
+
+When you start asking how records connect over many hops, graph thinking starts showing up.
+
+## Tree
+
+A tree says hierarchy matters.
+
+```txt
+root
+  child
+    grandchild
+```
+
+Use trees for:
+
+```txt
+folders
+DOM nodes
+ASTs
+menus
+parent-child ownership
+```
+
+A tree is actually a special kind of graph.
+
+It is connected, has no cycles, and each child has one parent.
+
+That is why trees feel simpler. They have strict rules:
+
+```txt
+one root
+one parent per child
+no cycles
+exactly one path from root to any node
+```
+
+Many real systems refuse to stay that tidy.
+
+A package can have many dependencies.
+
+A user can have many friends.
+
+A city can have many roads.
+
+A web page can link to many pages and be linked from many pages.
+
+When the world stops being a clean parent-child hierarchy, you are in graph country.
+
+## Graph
+
+A graph says arbitrary relationships matter.
+
+Use graphs for:
+
+```txt
+dependencies
+routes
+networks
+flows
+references
+permissions
+recommendations
+state spaces
+```
+
+The graph question is usually not:
+
+```txt
+Where is this item stored?
+```
+
+The graph question is:
+
+```txt
+What is connected to this?
+What can this reach?
+What depends on this?
+What is the shortest route?
+Is there a loop?
+What order is allowed?
+```
+
+That is the practical difference.
+
+Other structures help you hold data.
+
+Graphs help you follow relationships.

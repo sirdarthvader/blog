@@ -1,0 +1,173 @@
+---
+title: "Why Linked Lists Exist"
+seoTitle: "Why Use Linked Lists? A Beginner's Guide for Programmers"
+description: "Learn why linked lists exist, how they differ from arrays, and when reference-based sequences are useful in programming."
+publishedAt: 2026-01-23
+updatedAt: 2026-09-24
+tags: ["algorithms", "data-structures", "systems"]
+draft: false
+story:
+  id: "linked-lists"
+  role: "chapter"
+  order: 1
+  parent: "linked-lists-for-programmers"
+---
+
+Arrays are usually the first sequence structure programmers learn.
+
+That makes sense.
+
+Arrays are simple to picture:
+
+```txt
+index:  0   1   2
+value: [A] [B] [C]
+```
+
+If you know the index, you can jump straight to the value.
+
+That is powerful.
+
+So why do linked lists exist?
+
+Because not every sequence wants to be position-first.
+
+Sometimes the useful thing is not fast indexing.
+
+Sometimes the useful thing is cheap local change.
+
+## Arrays Are Position-Based
+
+An array stores values by position.
+
+```txt
+items[0]
+items[1]
+items[2]
+```
+
+The index is the interface.
+
+That makes arrays excellent when you need:
+
+```txt
+random access
+iteration over compact data
+sorting
+cache-friendly scans
+simple storage
+```
+
+But arrays have a cost when the shape changes in the middle.
+
+If you insert at the front:
+
+```txt
+[B] [C] [D]
+```
+
+and want:
+
+```txt
+[A] [B] [C] [D]
+```
+
+the existing items need to move.
+
+That is not always a problem. Modern arrays are very good.
+
+But it is the tradeoff.
+
+## Linked Lists Are Reference-Based
+
+A linked list stores a sequence as relationships between nodes:
+
+```txt
+[A] -> [B] -> [C]
+```
+
+Each node contains two things:
+
+```txt
+value
+reference to the next node
+```
+
+The list is not defined by contiguous memory.
+
+It is defined by links.
+
+That means inserting after a known node can be local:
+
+```txt
+[A] -> [C]
+```
+
+becomes:
+
+```txt
+[A] -> [B] -> [C]
+```
+
+You changed references.
+
+You did not shift every later item.
+
+## The Real Tradeoff
+
+Linked lists make some operations local, but they make access more expensive.
+
+In an array:
+
+```txt
+go to index 50
+```
+
+is direct.
+
+In a linked list:
+
+```txt
+go to item 50
+```
+
+means:
+
+```txt
+start at head
+follow next
+follow next
+follow next
+...
+```
+
+You walk there.
+
+That is the deal:
+
+```txt
+arrays are good at position
+linked lists are good at local rewiring
+```
+
+## Why This Matters
+
+Linked lists are useful because they teach a different model of data.
+
+Not:
+
+```txt
+where is item number 7?
+```
+
+But:
+
+```txt
+what does this item point to next?
+```
+
+That model shows up in queues, LRU caches, undo stacks, adjacency lists, memory allocators, and systems code.
+
+Even when you do not use linked lists directly, understanding them makes pointers, references, ownership, and mutation easier to reason about.
+
+That is the real reason to learn them.

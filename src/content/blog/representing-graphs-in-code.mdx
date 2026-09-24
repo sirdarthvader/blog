@@ -1,0 +1,221 @@
+---
+title: "Representing Graphs in Code"
+seoTitle: "Representing Graphs in Code: Edge Lists, Adjacency Lists, and Matrices"
+description: "Learn how to represent graphs in code using edge lists, adjacency lists, adjacency matrices, and reversed graphs for practical programming problems."
+publishedAt: 2026-01-16
+updatedAt: 2026-09-24
+tags: ["algorithms", "data-structures", "systems"]
+draft: false
+story:
+  id: "graphs"
+  role: "chapter"
+  order: 4
+  parent: "understanding-graphs-for-programmers"
+  dependsOn:
+    - "graphs-vs-arrays-trees-and-maps"
+---
+
+The math says:
+
+```txt
+G = (V, E)
+```
+
+That is clean.
+
+Code needs something more concrete.
+
+You need to decide how nodes and edges live in memory, how fast you need to find neighbors, and what questions the program will ask most often.
+
+There is no single correct representation.
+
+There is only the representation that makes your next question cheap.
+
+## Start With Edges
+
+The simplest shape is an edge list:
+
+```ts
+const edges = [
+  ["ui-kit", "shared-utils"],
+  ["checkout-app", "ui-kit"],
+  ["admin-app", "ui-kit"],
+];
+```
+
+This is very close to the math.
+
+Each pair is an edge.
+
+If your data comes from logs, CSV files, database rows, or dependency extraction, it often starts like this.
+
+The edge list is good when you mostly need to store relationships or stream through them.
+
+It is less good when you repeatedly ask:
+
+```txt
+What are the neighbors of this node?
+```
+
+To answer that from an edge list, you scan the whole list.
+
+That gets old quickly.
+
+## Adjacency Lists
+
+An adjacency list stores each node with the nodes next to it:
+
+```ts
+const graph = new Map<string, string[]>([
+  ["shared-utils", []],
+  ["ui-kit", ["shared-utils"]],
+  ["checkout-app", ["ui-kit"]],
+  ["admin-app", ["ui-kit"]],
+]);
+```
+
+This says:
+
+```txt
+ui-kit imports shared-utils
+checkout-app imports ui-kit
+admin-app imports ui-kit
+```
+
+Now asking for neighbors is cheap:
+
+```ts
+const neighbors = graph.get("checkout-app") ?? [];
+```
+
+Most software graphs are sparse.
+
+Sparse means each node connects to a small number of other nodes, not every node in the system.
+
+A package imports a few packages. A web page links to a few pages. A state machine has a few next states.
+
+For sparse graphs, adjacency lists are usually the default.
+
+Their space cost is:
+
+```txt
+O(V + E)
+```
+
+That means storage grows with the number of nodes plus the number of edges.
+
+## Reversing A Graph
+
+Direction matters.
+
+If your graph says:
+
+```txt
+checkout-app -> ui-kit -> shared-utils
+```
+
+That means:
+
+```txt
+checkout-app depends on ui-kit
+ui-kit depends on shared-utils
+```
+
+This is useful when asking:
+
+```txt
+What does checkout-app need?
+```
+
+But if `shared-utils` changes, you want the opposite question:
+
+```txt
+Who depends on shared-utils?
+```
+
+For that, build the reversed graph:
+
+```txt
+shared-utils -> ui-kit -> checkout-app
+```
+
+In code:
+
+```ts
+function reverseGraph(graph: Map<string, string[]>): Map<string, string[]> {
+  const reversed = new Map<string, string[]>();
+
+  for (const [node, neighbors] of graph) {
+    if (!reversed.has(node)) reversed.set(node, []);
+
+    for (const neighbor of neighbors) {
+      const incoming = reversed.get(neighbor) ?? [];
+      incoming.push(node);
+      reversed.set(neighbor, incoming);
+    }
+  }
+
+  return reversed;
+}
+```
+
+This small transformation changes the question your graph can answer efficiently.
+
+That is a recurring theme: representation follows the question.
+
+## Adjacency Matrices
+
+An adjacency matrix uses a grid:
+
+```txt
+      A B C
+    +------
+  A | 0 1 0
+  B | 0 0 1
+  C | 0 0 0
+```
+
+`1` means an edge exists.
+
+`0` means it does not.
+
+This makes one question very fast:
+
+```txt
+Is there an edge from A to B?
+```
+
+But the matrix needs space for every possible pair of nodes:
+
+```txt
+O(V^2)
+```
+
+That is fine for dense graphs, where many nodes connect to many other nodes.
+
+It is wasteful for sparse graphs.
+
+Most codebase, route, social, and document-link graphs are sparse, so start with an adjacency list unless you have a specific reason not to.
+
+## The Practical Rule
+
+Choose the representation by asking:
+
+```txt
+Do I mostly load/store edges?
+  edge list
+
+Do I often walk from a node to its neighbors?
+  adjacency list
+
+Do I often ask whether a specific edge exists?
+  adjacency matrix or a Set-backed adjacency list
+```
+
+Graphs are not just an abstract idea.
+
+They are a modeling choice plus a storage choice.
+
+The model decides what the graph means.
+
+The representation decides what is cheap.

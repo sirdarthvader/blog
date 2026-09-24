@@ -7,12 +7,23 @@ interface Props {
   publishedAt: Date;
   slug: string;
   tags: string[];
+  story?: {
+    id: string;
+    title: string;
+    role: 'hub' | 'chapter';
+    order: number;
+  };
 }
 
-const { title, description, publishedAt, slug } = Astro.props;
+const { title, description, publishedAt, slug, story } = Astro.props;
 ---
 
 <article>
+  {story && (
+    <a href={`/stories/${story.id}`} class="story-label">
+      {story.role === 'hub' ? story.title : `Part ${story.order} of ${story.title}`}
+    </a>
+  )}
   <a href={`/blog/${slug}`} style="text-decoration: none;">
     <div style="display: flex; align-items: flex-start; justify-content: space-between; gap: 1rem; margin-bottom: 0.25rem;">
       <h2 style="font-weight: 500; font-size: 1rem; line-height: 1.5; color: var(--text-heading);" class="post-title">
@@ -27,6 +38,19 @@ const { title, description, publishedAt, slug } = Astro.props;
 </article>
 
 <style>
+  .story-label {
+    color: var(--text-nav);
+    display: inline-flex;
+    font-family: ui-monospace, monospace;
+    font-size: 0.75rem;
+    margin-bottom: 0.35rem;
+    text-decoration: none;
+  }
+
+  .story-label:hover {
+    color: var(--text-heading);
+  }
+
   a:hover .post-title {
     color: var(--text-nav-hover);
   }

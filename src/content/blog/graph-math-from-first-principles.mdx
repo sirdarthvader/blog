@@ -1,0 +1,234 @@
+---
+title: "The Math Root of Graphs"
+seoTitle: "Graph Theory Basics for Programmers: Vertices, Edges, Paths, and Cycles"
+description: "Learn the graph theory basics programmers need: vertices, edges, directed graphs, degree, paths, cycles, and weighted edges."
+publishedAt: 2026-01-14
+updatedAt: 2026-09-24
+tags: ["algorithms", "data-structures", "systems"]
+draft: false
+story:
+  id: "graphs"
+  role: "chapter"
+  order: 2
+  parent: "understanding-graphs-for-programmers"
+  dependsOn:
+    - "why-graphs-exist"
+---
+
+The mathematical definition of a graph is short:
+
+```txt
+G = (V, E)
+```
+
+Read it like this:
+
+```txt
+G = the graph
+V = a set of vertices
+E = a set of edges
+```
+
+A vertex is a thing. Programmers usually call it a node.
+
+An edge is a relationship between two things.
+
+That is the whole seed.
+
+```txt
+V = {A, B, C}
+E = {(A, B), (B, C)}
+```
+
+This describes a graph with three nodes and two relationships:
+
+```txt
+A -- B -- C
+```
+
+Nothing here says the nodes must be cities, users, files, functions, web pages, chess positions, or database rows.
+
+The math stays abstract on purpose.
+
+It gives us a tiny language for talking about a huge number of systems.
+
+## Vertices
+
+Vertices are the things in the model:
+
+```txt
+user
+file
+package
+city
+function
+web page
+database record
+board position
+```
+
+The first real design choice is deciding what deserves to be a node.
+
+In a routing app, a node might be a city.
+
+In a more detailed map, a node might be an intersection.
+
+In an indoor navigation app, a node might be a doorway, stairwell, elevator, or room.
+
+That choice changes what questions your graph can answer.
+
+## Edges
+
+Edges are relationships.
+
+```txt
+A -- B
+```
+
+That can mean:
+
+```txt
+A is friends with B
+A imports B
+A links to B
+A can move to B
+A is connected by a road to B
+```
+
+The edge has no meaning by itself.
+
+You give it meaning when you build the model.
+
+## Direction
+
+Some relationships go both ways:
+
+```txt
+Delhi -- Jaipur
+```
+
+If there is a normal two-way road, you can travel either direction.
+
+That is an undirected edge.
+
+Some relationships point one way:
+
+```txt
+checkout-app --> ui-kit
+```
+
+`checkout-app` imports `ui-kit`.
+
+That does not mean `ui-kit` imports `checkout-app`.
+
+That is a directed edge.
+
+Direction matters because many questions change when arrows exist:
+
+```txt
+Can I reach B from A?
+Can B reach A?
+Who depends on this?
+What does this depend on?
+```
+
+Those are different questions in a directed graph.
+
+## Degree
+
+The degree of a node counts how many edges touch it.
+
+In an undirected graph:
+
+```txt
+degree(A) = number of neighbors A has
+```
+
+In a directed graph, we split that idea:
+
+```txt
+in-degree  = how many edges point into this node
+out-degree = how many edges leave this node
+```
+
+In a dependency graph:
+
+```txt
+high in-degree  = many things depend on this node
+high out-degree = this node depends on many things
+```
+
+That alone can teach you a lot about a codebase.
+
+A package with high in-degree is risky to change.
+
+A package with high out-degree may be doing too much.
+
+## Paths
+
+A path is a sequence of connected nodes:
+
+```txt
+A -> B -> C -> D
+```
+
+This is the idea behind walking a graph.
+
+You stand on one node, follow an edge to another node, and keep going.
+
+The path matters when you ask:
+
+```txt
+Can I get there?
+How many steps does it take?
+What is the cheapest route?
+Which choices lead to this result?
+```
+
+## Cycles
+
+A cycle is a path that comes back to where it started:
+
+```txt
+A -> B -> C -> A
+```
+
+Cycles are not automatically bad.
+
+In a map, cycles are normal. You can drive around a block.
+
+In a social network, cycles are normal. People can mutually know each other.
+
+In a build dependency graph, cycles are usually a problem:
+
+```txt
+ui-kit depends on shared-utils
+shared-utils depends on ui-kit
+```
+
+Now neither package has a clean place to start.
+
+The same shape can be healthy in one domain and broken in another.
+
+That is why the model comes before the algorithm.
+
+## Weights
+
+Some edges have cost:
+
+```txt
+Delhi -- Jaipur: 270 km
+Delhi -- Mumbai: 1400 km
+```
+
+The number attached to the edge is a weight.
+
+Weights can represent distance, latency, money, time, risk, probability, difficulty, bundle size, or anything else where "this relationship costs something" matters.
+
+When every edge costs the same, the shortest path means fewest hops.
+
+When edges have different weights, the shortest path means cheapest total cost.
+
+That is the small mathematical root.
+
+Everything else grows from here.

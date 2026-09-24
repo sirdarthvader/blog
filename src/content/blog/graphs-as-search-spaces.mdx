@@ -1,0 +1,164 @@
+---
+title: "Graphs as Search Spaces"
+seoTitle: "Graphs as Search Spaces: Game Trees, Minimax, and Pruning"
+description: "Learn how graphs can model search spaces in games, compilers, planners, and workflows using generated neighbors, minimax, and pruning."
+publishedAt: 2026-01-21
+updatedAt: 2026-09-24
+tags: ["algorithms", "data-structures", "systems"]
+draft: false
+story:
+  id: "graphs"
+  role: "chapter"
+  order: 9
+  parent: "understanding-graphs-for-programmers"
+  dependsOn:
+    - "walking-graphs-bfs-and-dfs"
+  related:
+    - "weighted-graphs-and-shortest-paths"
+---
+
+Sometimes the graph is not stored anywhere.
+
+You generate it while searching.
+
+Chess is the classic example:
+
+```txt
+node = board position
+edge = legal move
+```
+
+From one position, legal moves produce the next positions.
+
+From those positions, legal moves produce more positions.
+
+That is a graph.
+
+But it is far too large to visit completely.
+
+## The Graph Is Implicit
+
+An explicit graph is stored:
+
+```txt
+A -> [B, C]
+B -> [D]
+C -> []
+```
+
+An implicit graph is generated:
+
+```ts
+function neighbors(position: Position): Position[] {
+  return legalMoves(position).map((move) => applyMove(position, move));
+}
+```
+
+You do not hold the whole graph in memory.
+
+You hold the current node and a way to generate the next nodes.
+
+That is enough to search.
+
+## Why Not Visit Everything?
+
+Because the graph explodes.
+
+If each position has 30 possible moves, then a few layers already become enormous:
+
+```txt
+depth 1: 30
+depth 2: 900
+depth 3: 27,000
+depth 4: 810,000
+```
+
+The lesson is not:
+
+```txt
+traverse the whole graph
+```
+
+The lesson is:
+
+```txt
+search the useful part
+```
+
+## Minimax
+
+In a two-player game, search alternates between goals.
+
+On your turn:
+
+```txt
+choose the move that maximizes your score
+```
+
+On the opponent's turn:
+
+```txt
+assume they choose the move that minimizes your score
+```
+
+That is minimax.
+
+It is DFS over a game graph with alternating meaning at each level.
+
+The tree-like picture is only a slice of the larger graph. Positions can repeat, but the search usually looks forward to a limited depth.
+
+## Pruning
+
+Search becomes practical when you skip branches that cannot change the answer.
+
+Alpha-beta pruning is the classic chess example.
+
+The intuition is:
+
+```txt
+If I already have a better option,
+and this branch cannot beat it,
+stop searching this branch.
+```
+
+That idea appears outside games too.
+
+Query planners skip plans that cannot win.
+
+Build systems skip work that is unaffected.
+
+Bundlers skip modules that are unreachable.
+
+Compilers skip paths that type information already rules out.
+
+The deep idea is not "play chess".
+
+The deep idea is:
+
+```txt
+use graph structure to avoid unnecessary work
+```
+
+## The Practical Shape
+
+When a problem is a search space, ask:
+
+```txt
+What is a state?
+What actions create neighboring states?
+How deep can I afford to search?
+How do I score or recognize a useful state?
+What branches can I prove are not worth exploring?
+```
+
+That is graph thinking without a stored graph.
+
+You still have nodes and edges.
+
+You just create them on demand.
+
+This is why graph ideas show up in places that do not look like graph problems at first: games, planners, compilers, workflows, parsers, and AI search.
+
+The graph may be invisible.
+
+The relationships are still doing the work.

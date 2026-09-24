@@ -1,0 +1,185 @@
+---
+title: "Arrays vs Linked Lists"
+seoTitle: "Arrays vs Linked Lists: Access, Insertion, Deletion, and Memory Tradeoffs"
+description: "Compare arrays and linked lists across random access, insertion, deletion, traversal, memory overhead, and cache locality."
+publishedAt: 2026-01-25
+updatedAt: 2026-09-24
+tags: ["algorithms", "data-structures", "systems"]
+draft: false
+story:
+  id: "linked-lists"
+  role: "chapter"
+  order: 3
+  parent: "linked-lists-for-programmers"
+  dependsOn:
+    - "linked-list-nodes-and-references"
+---
+
+Arrays and linked lists both represent sequences.
+
+That is where the similarity ends.
+
+An array is position-based.
+
+A linked list is reference-based.
+
+That one difference explains most of the tradeoffs.
+
+## Access
+
+Arrays are excellent at random access:
+
+```ts
+items[50]
+```
+
+If you know the index, you can jump to the value.
+
+Linked lists cannot do that.
+
+To reach the 50th node, you start at the head and walk:
+
+```txt
+head -> 1 -> 2 -> 3 -> ... -> 50
+```
+
+So:
+
+```txt
+array access by index: O(1)
+linked list access by index: O(n)
+```
+
+If you often need "give me item at index i", use an array.
+
+## Insertion
+
+Arrays may need to shift items when inserting in the middle:
+
+```txt
+[A] [C] [D]
+```
+
+Insert `B` after `A`:
+
+```txt
+[A] [B] [C] [D]
+```
+
+`C` and `D` move.
+
+In a linked list, if you already have the node `A`, insertion is local:
+
+```txt
+[A] -> [C]
+```
+
+becomes:
+
+```txt
+[A] -> [B] -> [C]
+```
+
+You only update references.
+
+But notice the hidden condition:
+
+```txt
+if you already have the node
+```
+
+If you first need to search for `A`, the operation includes that traversal cost.
+
+## Deletion
+
+Deletion has the same pattern.
+
+An array may need to shift later items left.
+
+A linked list can remove a known node by rewiring around it.
+
+For a singly linked list, you usually need the previous node:
+
+```txt
+prev -> target -> next
+```
+
+becomes:
+
+```txt
+prev -> next
+```
+
+Again, local mutation is cheap once you are at the right place.
+
+Getting to the right place may still be expensive.
+
+## Memory
+
+Arrays store values compactly.
+
+Linked lists store values plus references.
+
+Each node has overhead:
+
+```txt
+value
+next pointer
+object allocation overhead
+```
+
+Doubly linked lists add another pointer:
+
+```txt
+previous pointer
+```
+
+So linked lists often use more memory than arrays for the same values.
+
+## Cache Locality
+
+This is the practical detail many beginner explanations skip.
+
+Arrays are usually stored contiguously.
+
+That means the CPU can load nearby values efficiently.
+
+Linked-list nodes can be scattered around memory.
+
+Following `next` may jump to a totally different location.
+
+That pointer chasing can be slower than the Big-O table makes it look.
+
+This is why arrays often beat linked lists in real application code, even for operations where linked lists look attractive on paper.
+
+## The Useful Comparison
+
+```txt
+Array:
+  fast index access
+  compact memory
+  cache-friendly traversal
+  middle insertion/deletion may shift items
+
+Linked list:
+  slow index access
+  extra memory per node
+  pointer chasing during traversal
+  local insertion/deletion is cheap once positioned
+```
+
+The right question is not:
+
+```txt
+which one is better?
+```
+
+The right question is:
+
+```txt
+what does this sequence need to be good at?
+```
+
+Most of the time, arrays are the better default.
+
+Linked lists are for cases where reference-based local rewiring is the point.
