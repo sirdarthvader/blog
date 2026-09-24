@@ -11,6 +11,8 @@ interface Props {
   article?: boolean;
   publishedAt?: Date;
   updatedAt?: Date;
+  tags?: string[];
+  noindex?: boolean;
   wide?: boolean;
   structuredData?: Record<string, unknown> | Record<string, unknown>[];
 }
@@ -23,8 +25,10 @@ const {
   article = false,
   publishedAt,
   updatedAt,
+  tags = [],
+  noindex = false,
   wide = false,
-  structuredData,
+  structuredData: extraStructuredData,
 } = Astro.props;
 
 const siteUrl = Astro.site ?? 'https://promax.dev';
@@ -34,11 +38,68 @@ const ogImageURL = ogImage ? new URL(ogImage, siteUrl) : new URL('/og-default.pn
 const pageTitle = seoTitle ?? title;
 const fullTitle = pageTitle === 'Home' ? 'Ashish Nandan Singh' : `${pageTitle} — Ashish Nandan Singh`;
 const isHome = Astro.url.pathname === '/';
-const structuredDataItems = Array.isArray(structuredData)
-  ? structuredData
-  : structuredData
-    ? [structuredData]
+const personId = new URL('/#person', siteUrl).href;
+const websiteId = new URL('/#website', siteUrl).href;
+const webPageId = `${canonicalURL.href}#webpage`;
+const extraStructuredDataItems = Array.isArray(extraStructuredData)
+  ? extraStructuredData
+  : extraStructuredData
+    ? [extraStructuredData]
     : [];
+
+const baseStructuredData = {
+  '@context': 'https://schema.org',
+  '@graph': [
+    {
+      '@type': 'Person',
+      '@id': personId,
+      name: 'Ashish Nandan Singh',
+      url: new URL('/', siteUrl).href,
+      jobTitle: 'Frontend Platform Engineer',
+      sameAs: [
+        'https://github.com/sirdarthvader',
+        'https://linkedin.com/in/ashish-nandan-singh',
+      ],
+    },
+    {
+      '@type': 'WebSite',
+      '@id': websiteId,
+      url: new URL('/', siteUrl).href,
+      name: 'Ashish Nandan Singh',
+      description: 'Writing on frontend platform engineering, software systems, and learning by building.',
+      inLanguage: 'en',
+      author: { '@id': personId },
+    },
+    {
+      '@type': 'WebPage',
+      '@id': webPageId,
+      url: canonicalURL.href,
+      name: fullTitle,
+      description,
+      isPartOf: { '@id': websiteId },
+      about: { '@id': personId },
+      inLanguage: 'en',
+    },
+    ...(article && publishedAt && extraStructuredDataItems.length === 0
+      ? [
+          {
+            '@type': 'BlogPosting',
+            '@id': `${canonicalURL.href}#article`,
+            mainEntityOfPage: { '@id': webPageId },
+            headline: title,
+            description,
+            datePublished: publishedAt.toISOString(),
+            dateModified: (updatedAt ?? publishedAt).toISOString(),
+            author: { '@id': personId },
+            publisher: { '@id': personId },
+            keywords: tags,
+            inLanguage: 'en',
+          },
+        ]
+      : []),
+  ],
+};
+const structuredDataItems = [baseStructuredData, ...extraStructuredDataItems];
 ---
 
 <!doctype html>
@@ -50,10 +111,14 @@ const structuredDataItems = Array.isArray(structuredData)
 
     <title>{fullTitle}</title>
     <meta name="description" content={description} />
+    <meta name="author" content="Ashish Nandan Singh" />
+    <meta name="theme-color" content="#1a1a1a" />
+    {noindex && <meta name="robots" content="noindex, follow" />}
     <link rel="canonical" href={canonicalURL} />
 
     <!-- Open Graph -->
     <meta property="og:type" content={article ? 'article' : 'website'} />
+    <meta property="og:site_name" content="Ashish Nandan Singh" />
     <meta property="og:url" content={canonicalURL} />
     <meta property="og:title" content={fullTitle} />
     <meta property="og:description" content={description} />
@@ -64,6 +129,7 @@ const structuredDataItems = Array.isArray(structuredData)
     {article && updatedAt && (
       <meta property="article:modified_time" content={updatedAt.toISOString()} />
     )}
+    {article && tags.map((tag) => <meta property="article:tag" content={tag} />)}
 
     <!-- Twitter Card -->
     <meta name="twitter:card" content="summary_large_image" />

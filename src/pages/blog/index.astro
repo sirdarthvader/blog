@@ -20,7 +20,7 @@ const posts = selectedTag
   : allPosts.filter((p) => !p.data.story);
 ---
 
-<BaseLayout title="Writing" description="Articles on development, research, and ideas.">
+<BaseLayout title="Writing" description="Articles on development, research, and ideas." noindex={Boolean(selectedTag)}>
   <HomeBackLink />
   <header style="margin-bottom: 2.5rem;">
     <h1 style="font-size: 1.25rem; font-weight: 500; margin-bottom: 0.5rem; color: var(--text-heading);">Writing</h1>
@@ -39,7 +39,7 @@ const posts = selectedTag
       </a>
       {allTags.map((tag) => (
         <a
-          href={`/blog?tag=${tag}`}
+          href={`/tags/${encodeURIComponent(tag)}`}
           style={`font-family: ui-monospace, monospace; font-size: 0.75rem; text-decoration: none; color: ${selectedTag === tag ? 'var(--text-heading)' : 'var(--text-nav)'};`}
         >
           #{tag}
